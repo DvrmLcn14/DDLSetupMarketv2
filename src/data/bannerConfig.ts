@@ -25,12 +25,24 @@ export const DEFAULT_FLOATING_BANNER_ITEMS: FloatingBannerItem[] = [
     iconType: 'sparkles',
     accentColor: 'amber',
   },
+  {
+    id: 'empty-template-slot',
+    title: 'Your Ad / Sponsor Here',
+    highlightText: 'Available',
+    description: 'Space available for community partners, esports teams, or custom setup announcements.',
+    buttonText: 'Add Your Link',
+    buttonUrl: 'https://discord.gg/aFzAhfBy3',
+    badgeText: 'SPONSOR / AD',
+    onlineCount: 200,
+    iconType: 'zap',
+    accentColor: 'cyan',
+  },
 ];
 
 export const DEFAULT_FLOATING_BANNER_CONFIG: FloatingBannerConfig = {
   enabled: true,
   autoRotate: true,
-  intervalSeconds: 5,
+  intervalSeconds: 3,
   items: DEFAULT_FLOATING_BANNER_ITEMS,
   // Fallbacks for backwards compatibility
   title: DEFAULT_FLOATING_BANNER_ITEMS[0].title,

@@ -50,10 +50,23 @@ export const adsData: FloatingBannerItem[] = [
     iconType: 'sparkles',
     accentColor: 'amber',
   },
+  {
+    id: 'empty-template-slot',
+    badgeText: 'SPONSOR / AD',
+    title: 'Your Ad / Sponsor Here',
+    highlightText: 'Available',
+    description:
+      'Space available for community partners, esports teams, or custom setup announcements.',
+    buttonText: 'Add Your Link',
+    buttonUrl: 'https://discord.gg/aFzAhfBy3',
+    onlineCount: 200,
+    iconType: 'zap',
+    accentColor: 'cyan',
+  },
 ];
 
-// Configuration constants: 5-second automatic rotation
-export const BANNER_ROTATION_INTERVAL_SECONDS = 5;
+// Configuration constants: 3-second automatic rotation
+export const BANNER_ROTATION_INTERVAL_SECONDS = 3;
 
 interface FloatingBannerProps {
   config?: FloatingBannerConfig;
@@ -154,10 +167,14 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
   // Determine active slides list: Use config.items if present, otherwise default to top adsData
   const slides: FloatingBannerItem[] = React.useMemo(() => {
     if (config?.items && config.items.length > 0) {
-      // Ensure at least 2 slides
-      const s1 = config.items[0] || adsData[0];
-      const s2 = config.items[1] || adsData[1];
-      return [s1, s2];
+      if (config.items.length < adsData.length) {
+        const merged = [...config.items];
+        while (merged.length < adsData.length) {
+          merged.push(adsData[merged.length]);
+        }
+        return merged;
+      }
+      return config.items;
     }
     return adsData;
   }, [config?.items]);
@@ -450,7 +467,7 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
                   }}
                   className="text-[10px] text-indigo-300 hover:text-indigo-200 underline font-semibold cursor-pointer"
                 >
-                  Switch to Slide {activeIndex === 0 ? '2' : '1'}
+                  Switch to Slide {((activeIndex + 1) % slides.length) + 1}
                 </button>
                 <button
                   type="button"

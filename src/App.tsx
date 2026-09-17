@@ -110,15 +110,20 @@ export default function App() {
             return it;
           });
 
-          // If only 1 item existed in localStorage, append default second slot
-          if (updatedItems.length < 2) {
-            updatedItems.push(DEFAULT_FLOATING_BANNER_ITEMS[1]);
+          // If fewer items existed in localStorage, append missing default slots up to DEFAULT_FLOATING_BANNER_ITEMS.length
+          while (updatedItems.length < DEFAULT_FLOATING_BANNER_ITEMS.length) {
+            const nextItem = DEFAULT_FLOATING_BANNER_ITEMS[updatedItems.length];
+            if (nextItem) {
+              updatedItems.push(nextItem);
+            } else {
+              break;
+            }
           }
 
           return {
             ...parsed,
             items: updatedItems,
-            intervalSeconds: parsed.intervalSeconds || 5,
+            intervalSeconds: parsed.intervalSeconds || 3,
             autoRotate: parsed.autoRotate !== false,
           };
         }

@@ -59,7 +59,7 @@ export const BannerConfigModal: React.FC<BannerConfigModalProps> = ({
     ...config,
     items: initialItems,
     autoRotate: config.autoRotate !== false,
-    intervalSeconds: config.intervalSeconds || 5,
+    intervalSeconds: config.intervalSeconds || 3,
   });
 
   const [activeSlideIndex, setActiveSlideIndex] = useState<number>(0);
