@@ -61,6 +61,7 @@ import { CreatorProfileModal } from './CreatorProfileModal';
 import { downloadSetupAsImage } from '../utils/setupImageExport';
 import { normalizeSimString } from '../utils/motorsportNomenclature';
 import { getTrackFlagEmoji } from '../utils/trackFlags';
+import { useLanguage, translateLocation } from '../i18n/LanguageContext';
 
 interface SetupMarketplaceProps {
   setups: CarSetup[];
@@ -105,6 +106,8 @@ export const SetupMarketplace: React.FC<SetupMarketplaceProps> = ({
   activeViewMode = 'all',
   onViewModeChange,
 }) => {
+  const { language, t } = useLanguage();
+
   // Favorites State with local persistence fallback
   const [localFavorites, setLocalFavorites] = useState<string[]>(() => {
     try {
@@ -744,10 +747,12 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
             </div>
 
             <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tight">
-              DDLSetupMarket — {activeGame.name} Car Setups
+              DDLSetupMarket — {activeGame.name} {language === 'tr' ? 'Araç Setupları' : 'Car Setups'}
             </h1>
             <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-              Explore, compare, and download verified esports and community setups for {activeGame.name} on DDLSetupMarket. Complete with telemetry proof and in-game calibration sheets.
+              {language === 'tr'
+                ? `DDLSetupMarket üzerinde ${activeGame.name} için doğrulanmış espor ve topluluk setuplarını keşfedin, karşılaştırın ve indirin. Telemetri kanıtları ve oyun içi kalibrasyon sayfalarıyla birlikte.`
+                : `Explore, compare, and download verified esports and community setups for ${activeGame.name} on DDLSetupMarket. Complete with telemetry proof and in-game calibration sheets.`}
             </p>
           </div>
 
@@ -769,7 +774,7 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
                   type="button"
                   onClick={onLogout}
                   className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg transition-colors cursor-pointer"
-                  title="Sign Out"
+                  title={t.signOut}
                 >
                   <LogOut className="w-3.5 h-3.5" />
                 </button>
@@ -781,7 +786,7 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
                 className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-750 border border-slate-700 flex items-center gap-1.5 transition-colors shadow cursor-pointer"
               >
                 <LogIn className="w-3.5 h-3.5 text-sky-400" />
-                <span>Sign In / Register</span>
+                <span>{t.signIn} / {t.register}</span>
               </button>
             )}
 
@@ -795,7 +800,7 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
               className="px-4 py-2 rounded-xl text-xs font-black text-slate-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 flex items-center gap-1.5 shadow-lg shadow-amber-500/20 transition-all transform hover:scale-[1.02] cursor-pointer"
             >
               <PlusCircle className="w-4 h-4" />
-              <span>Submit Setup</span>
+              <span>{t.submitSetup}</span>
             </button>
           </div>
         </div>
@@ -804,7 +809,7 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
         <div className="mt-5 pt-4 border-t border-slate-800 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">
-              Active Game:
+              {t.activeGameLabel}
             </span>
             {SIM_GAMES.map((game) => {
               const isSelected = selectedGameFilter === game.id;
@@ -832,10 +837,10 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
           </div>
 
           <div className="text-xs text-slate-400 flex items-center gap-1.5">
-            <span>Selected Circuit:</span>
+            <span>{language === 'tr' ? 'Seçili Pist:' : 'Selected Circuit:'}</span>
             <strong className="text-white font-bold flex items-center gap-1">
               <span>{getTrackFlagEmoji(selectedTrackFilter, TRACKS[selectedTrackFilter]?.country)}</span>
-              <span>{TRACKS[selectedTrackFilter]?.name?.split('(')[0] || (selectedTrackFilter === 'all' ? 'All F1 Circuits' : selectedTrackFilter)}</span>
+              <span>{TRACKS[selectedTrackFilter]?.name?.split('(')[0] || (selectedTrackFilter === 'all' ? (language === 'tr' ? 'Tüm F1 Pistleri' : 'All F1 Circuits') : selectedTrackFilter)}</span>
             </strong>
           </div>
         </div>
@@ -845,7 +850,7 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
           <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
             <span className="font-bold flex items-center gap-1.5 text-slate-300">
               <Calendar className="w-3.5 h-3.5 text-red-500" />
-              <span>Select F1 Grand Prix Circuit ({selectedGameFilter === 'f1_24' ? 'F1® 24' : selectedGameFilter === 'f1_26' ? 'F1® 26' : 'F1® 25'}):</span>
+              <span>{language === 'tr' ? 'F1 Grand Prix Pistini Seçin' : 'Select F1 Grand Prix Circuit'} ({selectedGameFilter === 'f1_24' ? 'F1® 24' : selectedGameFilter === 'f1_26' ? 'F1® 26' : 'F1® 25'}):</span>
             </span>
             <button
               type="button"
@@ -859,7 +864,7 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
                   : 'text-slate-400 hover:text-white border-slate-800 hover:border-slate-700'
               }`}
             >
-              All Circuits
+              {t.allTracks}
             </button>
           </div>
 
@@ -913,10 +918,10 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-[9px] font-black uppercase tracking-widest text-red-400 bg-red-500/15 px-2 py-0.5 rounded border border-red-500/30">
-                      Official Grand Prix Circuit
+                      {language === 'tr' ? 'Resmî Grand Prix Pisti' : 'Official Grand Prix Circuit'}
                     </span>
                     <span className="text-xs font-bold text-slate-400">
-                      {TRACKS[selectedTrackFilter].country}
+                      {translateLocation(TRACKS[selectedTrackFilter].country, language)}
                     </span>
                   </div>
                   <h2 className="text-sm sm:text-base font-black text-white tracking-tight mt-0.5">
@@ -927,19 +932,19 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
                 <div className="bg-slate-900/90 border border-slate-800 p-2 rounded-lg text-center">
-                  <span className="text-[9px] text-slate-400 block font-sans uppercase font-bold">Length</span>
+                  <span className="text-[9px] text-slate-400 block font-sans uppercase font-bold">{language === 'tr' ? 'Pist Uzunluğu' : 'Length'}</span>
                   <span className="text-slate-100 font-bold">{TRACKS[selectedTrackFilter].lengthKm}</span>
                 </div>
                 <div className="bg-slate-900/90 border border-slate-800 p-2 rounded-lg text-center">
-                  <span className="text-[9px] text-slate-400 block font-sans uppercase font-bold">Turns</span>
-                  <span className="text-slate-100 font-bold">{TRACKS[selectedTrackFilter].turnCount} Corners</span>
+                  <span className="text-[9px] text-slate-400 block font-sans uppercase font-bold">{language === 'tr' ? 'Viraj Sayısı' : 'Turns'}</span>
+                  <span className="text-slate-100 font-bold">{TRACKS[selectedTrackFilter].turnCount} {language === 'tr' ? 'Viraj' : 'Corners'}</span>
                 </div>
                 <div className="bg-slate-900/90 border border-slate-800 p-2 rounded-lg text-center">
-                  <span className="text-[9px] text-slate-400 block font-sans uppercase font-bold">F1 Lap Record</span>
+                  <span className="text-[9px] text-slate-400 block font-sans uppercase font-bold">{language === 'tr' ? 'F1 Tur Rekoru' : 'F1 Lap Record'}</span>
                   <span className="text-emerald-400 font-bold">{TRACKS[selectedTrackFilter].lapRecord}</span>
                 </div>
                 <div className="bg-slate-900/90 border border-slate-800 p-2 rounded-lg text-center">
-                  <span className="text-[9px] text-slate-400 block font-sans uppercase font-bold">Record Holder</span>
+                  <span className="text-[9px] text-slate-400 block font-sans uppercase font-bold">{language === 'tr' ? 'Rekor Sahibi' : 'Record Holder'}</span>
                   <span className="text-sky-300 font-bold truncate block">{TRACKS[selectedTrackFilter].recordHolder}</span>
                 </div>
               </div>
@@ -959,7 +964,7 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
               id="marketplace-search-input"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by setup title, author, track name, or driving notes..."
+              placeholder={t.searchPlaceholder}
               className="w-full bg-slate-950/90 border border-slate-800 rounded-xl pl-9 pr-8 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500 transition-colors"
             />
             {searchQuery && (
@@ -981,10 +986,10 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
               onChange={(e) => setSelectedTrackFilter(e.target.value)}
               className="w-full bg-slate-950/90 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 font-semibold focus:outline-none focus:border-sky-500"
             >
-              <option value="all">🏁 All F1 Circuits ({availableTracks.length})</option>
-              {availableTracks.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {getTrackFlagEmoji(t.id, t.country || TRACKS[t.id]?.country)} {t.name}
+              <option value="all">🏁 {t.allTracks} ({availableTracks.length})</option>
+              {availableTracks.map((tItem) => (
+                <option key={tItem.id} value={tItem.id}>
+                  {getTrackFlagEmoji(tItem.id, tItem.country || TRACKS[tItem.id]?.country)} {tItem.name}
                 </option>
               ))}
             </select>
@@ -998,10 +1003,10 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
               onChange={(e) => setSelectedDeviceFilter(e.target.value as any)}
               className="w-full bg-slate-950/90 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 font-semibold focus:outline-none focus:border-sky-500"
             >
-              <option value="All">🎮 All Controllers</option>
-              <option value="Wheel">🏎️ Wheel / Direct Drive</option>
-              <option value="Gamepad">🎮 Gamepad / Controller</option>
-              <option value="Keyboard">⌨️ Keyboard</option>
+              <option value="All">🎮 {language === 'tr' ? 'Tüm Kontrolcüler' : 'All Controllers'}</option>
+              <option value="Wheel">🏎️ {language === 'tr' ? 'Direksiyon Seti / Direct Drive' : 'Wheel / Direct Drive'}</option>
+              <option value="Gamepad">🎮 {language === 'tr' ? 'Oyun Kolu / Gamepad' : 'Gamepad / Controller'}</option>
+              <option value="Keyboard">⌨️ {language === 'tr' ? 'Klavye' : 'Keyboard'}</option>
             </select>
           </div>
 
@@ -1013,9 +1018,9 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
               onChange={(e) => setSortBy(e.target.value as any)}
               className="w-full bg-slate-950/90 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 font-semibold focus:outline-none focus:border-sky-500"
             >
-              <option value="rating">⭐ Highest Rated</option>
-              <option value="laptime">⚡ Fastest Lap Time</option>
-              <option value="newest">🕒 Recently Added</option>
+              <option value="rating">⭐ {t.highestRated}</option>
+              <option value="laptime">⚡ {language === 'tr' ? 'En Hızlı Tur Zamanı' : 'Fastest Lap Time'}</option>
+              <option value="newest">🕒 {t.mostRecent}</option>
             </select>
           </div>
         </div>
@@ -1024,7 +1029,9 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
         <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-800/60 text-xs">
           <div className="flex flex-wrap items-center gap-1.5">
             {/* Condition Filters */}
-            <span className="text-[11px] text-slate-500 font-bold uppercase mr-1">Track Condition:</span>
+            <span className="text-[11px] text-slate-500 font-bold uppercase mr-1">
+              {language === 'tr' ? 'PİST DURUMU:' : 'TRACK CONDITION:'}
+            </span>
             {(['All', 'Dry', 'Wet'] as const).map((cond) => (
               <button
                 key={cond}
@@ -1040,12 +1047,14 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
                     : 'bg-slate-950/70 text-slate-400 hover:text-slate-200 border border-slate-800'
                 }`}
               >
-                {cond === 'Dry' ? '☀️ Dry Weather' : cond === 'Wet' ? '🌧️ Wet Weather' : 'All'}
+                {cond === 'Dry' ? `☀️ ${t.dryWeather}` : cond === 'Wet' ? `🌧️ ${t.wetWeather}` : t.filterAll}
               </button>
             ))}
 
             {/* Session Type */}
-            <span className="text-[11px] text-slate-500 font-bold uppercase ml-2 mr-1">Setup Type:</span>
+            <span className="text-[11px] text-slate-500 font-bold uppercase ml-2 mr-1">
+              {language === 'tr' ? 'SETUP TİPİ:' : 'SETUP TYPE:'}
+            </span>
             {(['All', 'Qualifying', 'Race', 'Time Trial'] as const).map((typ) => (
               <button
                 key={typ}
@@ -1057,12 +1066,14 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
                     : 'bg-slate-950/70 text-slate-400 hover:text-slate-200 border border-slate-800'
                 }`}
               >
-                {typ === 'Qualifying' ? 'Qualifying' : typ === 'Race' ? 'Race Pace' : typ === 'Time Trial' ? 'Time Trial' : 'All'}
+                {typ === 'Qualifying' ? t.qualifying : typ === 'Race' ? t.racePace : typ === 'Time Trial' ? t.timeTrial : t.filterAll}
               </button>
             ))}
 
             {/* Verification Status */}
-            <span className="text-[11px] text-slate-500 font-bold uppercase ml-2 mr-1">Verification:</span>
+            <span className="text-[11px] text-slate-500 font-bold uppercase ml-2 mr-1">
+              {language === 'tr' ? 'DOĞRULAMA:' : 'VERIFICATION:'}
+            </span>
             {(['All', 'Verified', 'Pending'] as const).map((ver) => (
               <button
                 key={ver}
@@ -1081,15 +1092,15 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
                 {ver === 'Verified' ? (
                   <>
                     <ShieldCheck className="w-3 h-3 text-slate-950" />
-                    <span>Admin Verified</span>
+                    <span>{t.adminVerified}</span>
                   </>
                 ) : ver === 'Pending' ? (
                   <>
                     <Clock className="w-3 h-3 text-slate-950" />
-                    <span>Pending</span>
+                    <span>{t.pending}</span>
                   </>
                 ) : (
-                  'All'
+                  t.filterAll
                 )}
               </button>
             ))}
@@ -1115,7 +1126,7 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
               }`}
             >
               <Bookmark className={`w-3.5 h-3.5 ${viewMode === 'favorites' ? 'fill-amber-400 text-amber-400' : 'text-amber-400'}`} />
-              <span>Favorites ({favoritesList.length})</span>
+              <span>{t.favoritesTab} ({favoritesList.length})</span>
             </button>
           </div>
         </div>
@@ -1125,7 +1136,15 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
       <div className="space-y-3">
         <div className="flex items-center justify-between text-xs text-slate-400 px-1 flex-wrap gap-2">
           <span>
-            Showing <strong className="text-white">{filteredSetups.length}</strong> {viewMode === 'favorites' ? 'saved favorite' : ''} setups
+            {language === 'tr' ? (
+              <>
+                <strong className="text-white">{filteredSetups.length}</strong> {t.setupsCountText} gösteriliyor
+              </>
+            ) : (
+              <>
+                Showing <strong className="text-white">{filteredSetups.length}</strong> {viewMode === 'favorites' ? 'saved favorite' : ''} setups
+              </>
+            )}
           </span>
           <div className="flex items-center gap-1 bg-slate-900/80 p-1 rounded-xl border border-slate-800">
             <button
@@ -1136,7 +1155,7 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
                 viewMode === 'all' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              All Setups
+              {language === 'tr' ? 'Tüm Setuplar' : 'All Setups'}
             </button>
             <button
               type="button"
@@ -1147,7 +1166,7 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
               }`}
             >
               <Bookmark className={`w-3.5 h-3.5 ${viewMode === 'favorites' ? 'fill-slate-950' : 'text-amber-400'}`} />
-              <span>Saved Favorites ({favoritesList.length})</span>
+              <span>{language === 'tr' ? 'Kaydedilen Favoriler' : 'Saved Favorites'} ({favoritesList.length})</span>
             </button>
             {currentUser && (
               <button
@@ -1158,7 +1177,7 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
                   viewMode === 'my-setups' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                My Setups ({setups.filter((s) => s.creatorUsername.toLowerCase() === currentUser.username.toLowerCase()).length})
+                {language === 'tr' ? 'Setuplarım' : 'My Setups'} ({setups.filter((s) => s.creatorUsername.toLowerCase() === currentUser.username.toLowerCase()).length})
               </button>
             )}
           </div>
@@ -1254,14 +1273,14 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
                               : 'bg-sky-500/15 text-sky-300 border border-sky-500/30'
                           }`}
                         >
-                          {setup.condition === 'Dry' ? '☀️ Dry' : '🌧️ Wet'}
+                          {setup.condition === 'Dry' ? `☀️ ${t.dryWeather}` : `🌧️ ${t.wetWeather}`}
                         </span>
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700/60">
                           {setup.type === 'Qualifying'
-                            ? 'Qualifying'
+                            ? t.qualifying
                             : setup.type === 'Race'
-                            ? 'Race Pace'
-                            : 'Time Trial'}
+                            ? t.racePace
+                            : t.timeTrial}
                         </span>
 
                         {/* Bookmark / Favorite Toggle Button */}
@@ -1314,7 +1333,7 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
                           title="Admin Verified - In-Game Telemetry & Lap Proof Validated"
                         >
                           <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 fill-emerald-500/20" />
-                          <span>Admin Verified</span>
+                          <span>{t.adminVerified}</span>
                         </button>
                       ) : setup.verificationStatus === 'pending' || (setup.isUserSubmitted && !setup.isProofVerified) ? (
                         <button
@@ -1331,12 +1350,12 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
                           title="Pending Admin Verification Review"
                         >
                           <Clock className="w-3 h-3 text-amber-400" />
-                          <span>Pending Verification</span>
+                          <span>{t.pendingVerification}</span>
                         </button>
                       ) : setup.verificationStatus === 'rejected' ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-300 border border-rose-500/30 text-[10px] font-bold">
                           <AlertCircle className="w-3 h-3 text-rose-400" />
-                          <span>Verification Rejected</span>
+                          <span>{language === 'tr' ? 'Doğrulama Reddedildi' : 'Verification Rejected'}</span>
                         </span>
                       ) : null}
                     </div>
@@ -1347,7 +1366,7 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
                     <div className="flex flex-col justify-center">
                       <span className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
                         <User className="w-3 h-3 text-sky-400" />
-                        Author
+                        {language === 'tr' ? 'Geliştirici' : 'Author'}
                       </span>
                       <button
                         type="button"
@@ -1427,7 +1446,7 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
                             : 'bg-slate-800/80 text-slate-300 hover:text-amber-400 hover:bg-slate-750'
                         }`}
                       >
-                        {setup.userRating ? `Rated ${setup.userRating}★` : '+ Rate'}
+                        {setup.userRating ? `${setup.userRating} ${t.ratedStar}★` : t.rateButton}
                       </button>
                     </div>
 
@@ -1444,7 +1463,7 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
                     >
                       <MessageSquare className="w-3.5 h-3.5 text-sky-400 group-hover/disc:scale-110 transition-transform" />
                       <span>{getCommentCount(setup.id)}</span>
-                      <span className="text-slate-400 font-normal">reviews</span>
+                      <span className="text-slate-400 font-normal">{t.reviewsCountText}</span>
                     </button>
                   </div>
 
@@ -1462,12 +1481,12 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
                       {isCopied ? (
                         <>
                           <CheckCheck className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>Copied</span>
+                          <span>{t.copiedSetup}</span>
                         </>
                       ) : (
                         <>
                           <Copy className="w-3.5 h-3.5 text-slate-400" />
-                          <span>Copy Setup</span>
+                          <span>{t.copySetup}</span>
                         </>
                       )}
                     </button>
@@ -1484,7 +1503,7 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
                       title="View or write comments and tuning discussion"
                     >
                       <MessageCircle className="w-3.5 h-3.5 text-sky-400" />
-                      <span>Discuss ({getCommentCount(setup.id)})</span>
+                      <span>{t.discuss} ({getCommentCount(setup.id)})</span>
                     </button>
 
                     {/* Creator / Admin Actions: Edit & Delete Buttons */}
@@ -1498,7 +1517,7 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
                           title="Edit setup parameters, lap time, wing angles, or notes"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
-                          <span>Edit</span>
+                          <span>{t.edit}</span>
                         </button>
                         <button
                           type="button"
@@ -1508,7 +1527,7 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
                           title="Delete Setup"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
-                          <span>Delete</span>
+                          <span>{t.delete}</span>
                         </button>
                       </div>
                     )}
@@ -1522,7 +1541,7 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
                       className="text-xs px-3 py-1.5 text-white bg-sky-600 hover:bg-sky-500 rounded-lg font-bold transition-all shadow flex items-center gap-1 cursor-pointer ml-auto"
                     >
                       <Eye className="w-3.5 h-3.5" />
-                      <span>View Details</span>
+                      <span>{t.viewDetails}</span>
                     </button>
                   </div>
                 </div>

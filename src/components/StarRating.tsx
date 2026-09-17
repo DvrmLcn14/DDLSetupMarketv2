@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Star } from 'lucide-react';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface StarRatingProps {
   rating: number; // 0 to 5, can be fractional like 4.5
@@ -20,6 +21,7 @@ export const StarRating: React.FC<StarRatingProps> = ({
   onRate,
   showValue = true,
 }) => {
+  const { t } = useLanguage();
   const [hoverRating, setHoverRating] = useState<number | null>(null);
 
   const starSizes = {
@@ -74,7 +76,7 @@ export const StarRating: React.FC<StarRatingProps> = ({
         <span className="text-xs font-semibold text-amber-400 tracking-tight ml-0.5">
           {totalRatings === 0 || rating === 0 ? (
             <span className="text-slate-400 font-normal">
-              No ratings yet
+              {t.noRatingsYet}
             </span>
           ) : (
             <>

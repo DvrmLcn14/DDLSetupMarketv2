@@ -1,6 +1,7 @@
 import React from 'react';
-import { Plus, LogOut, Bookmark, ShieldCheck } from 'lucide-react';
+import { Plus, LogOut, Bookmark, ShieldCheck, Globe } from 'lucide-react';
 import { SupportedF1GameId, SimGame, UserAccount } from '../types';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface DesktopHeaderProps {
   activeGame: SimGame;
@@ -29,6 +30,8 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
   onOpenAdminPanel,
   pendingAdminCount = 0,
 }) => {
+  const { language, setLanguage, t } = useLanguage();
+
   return (
     <header className="bg-slate-900 border-b border-slate-800 text-slate-100 sticky top-0 z-30 select-none shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-4">
@@ -43,7 +46,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
                 <span>DDLSetupMarket</span>
               </h1>
               <p className="text-[11px] text-slate-400 font-medium">
-                Official F1 24, F1 25 &amp; F1 26 Setup Marketplace
+                {t.brandSubtitle}
               </p>
             </div>
           </div>
@@ -64,7 +67,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
               }`}
             >
               <span>🏎️</span>
-              <span>F1® 24 Setups</span>
+              <span>F1® 24 {t.setupsTab}</span>
             </button>
 
             {/* F1 25 Tab */}
@@ -79,7 +82,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
               }`}
             >
               <span>⚡</span>
-              <span>F1® 25 Setups</span>
+              <span>F1® 25 {t.setupsTab}</span>
             </button>
 
             {/* F1 26 Tab */}
@@ -94,7 +97,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
               }`}
             >
               <span>🚀</span>
-              <span>F1® 26 Setups</span>
+              <span>F1® 26 {t.setupsTab}</span>
             </button>
 
             {/* Favorites Tab */}
@@ -110,7 +113,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
                 }`}
               >
                 <Bookmark className={`w-3.5 h-3.5 ${isFavoritesActive ? 'fill-slate-950 text-slate-950' : 'text-amber-400'}`} />
-                <span>Favorites</span>
+                <span>{t.favoritesTab}</span>
                 {favoritesCount > 0 && (
                   <span
                     className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
@@ -127,8 +130,40 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
           </div>
         </div>
 
-        {/* Right Actions: Submit F1 Setup, Admin Review & Account */}
+        {/* Right Actions: Language Switcher, Submit F1 Setup, Admin Review & Account */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Clean Language Switcher Toggle */}
+          <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 shadow-inner">
+            <button
+              type="button"
+              id="lang-toggle-en"
+              onClick={() => setLanguage('en')}
+              title="Switch to English"
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                language === 'en'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              }`}
+            >
+              <span>🇬🇧</span>
+              <span>EN</span>
+            </button>
+            <button
+              type="button"
+              id="lang-toggle-tr"
+              onClick={() => setLanguage('tr')}
+              title="Türkçe'ye Geç"
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                language === 'tr'
+                  ? 'bg-red-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              }`}
+            >
+              <span>🇹🇷</span>
+              <span>TR</span>
+            </button>
+          </div>
+
           {/* Admin Verification Review Button */}
           {onOpenAdminPanel && (
             <button
@@ -139,14 +174,14 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
               title="Admin Screenshot & Lap Time Verification Panel"
             >
               <ShieldCheck className="w-3.5 h-3.5 text-sky-400" />
-              <span className="hidden sm:inline">Admin Review</span>
+              <span className="hidden sm:inline">{t.adminReview}</span>
               {pendingAdminCount > 0 ? (
                 <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-amber-500 text-slate-950 shadow-sm animate-pulse">
                   {pendingAdminCount}
                 </span>
               ) : (
                 <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-sky-500/20 text-sky-300">
-                  Panel
+                  {t.panelBadge}
                 </span>
               )}
             </button>
@@ -160,7 +195,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
             className="px-3.5 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-red-600/20 transition-all cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Submit Setup</span>
+            <span>{t.submitSetup}</span>
           </button>
 
           {/* User Account / Sign In */}
@@ -181,7 +216,7 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
                 type="button"
                 onClick={onLogout}
                 className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/30 transition-colors cursor-pointer"
-                title="Sign Out"
+                title={t.signOut}
               >
                 <LogOut className="w-3.5 h-3.5" />
               </button>
@@ -194,14 +229,14 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
                 onClick={() => onOpenAuth('login')}
                 className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white bg-slate-950 hover:bg-slate-800 border border-slate-800 transition-colors cursor-pointer"
               >
-                Sign In
+                {t.signIn}
               </button>
               <button
                 type="button"
                 onClick={() => onOpenAuth('register')}
                 className="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-950 bg-white hover:bg-slate-200 transition-colors cursor-pointer"
               >
-                Register
+                {t.register}
               </button>
             </div>
           )}

@@ -14,13 +14,14 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { FloatingBannerConfig, FloatingBannerItem } from '../types';
+import { useLanguage } from '../i18n/LanguageContext';
 
 /**
  * =========================================================================
  *  QUICK CONFIGURATION: EDIT YOUR ADVERTISEMENTS & ANNOUNCEMENTS HERE
  * =========================================================================
  * Modify, add, or replace slides in this array. The component will
- * automatically rotate through all items every 5 seconds.
+ * automatically rotate through all items every 3 seconds.
  * =========================================================================
  */
 export const adsData: FloatingBannerItem[] = [
@@ -169,6 +170,7 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
   onSaveConfig,
   isAdmin = false,
 }) => {
+  const { t } = useLanguage();
   // Active slide index (0 = Slide 1, 1 = Slide 2, etc.)
   const [currentSlideIndex, setCurrentSlideIndex] = useState<number>(0);
   const [isPaused, setIsPaused] = useState<boolean>(false);
@@ -389,7 +391,7 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
                 {typeof currentSlide.onlineCount === 'number' && (
                   <span className="flex items-center gap-1.5 text-[11px] font-medium text-slate-400">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                    <span className="text-emerald-400 font-bold">{currentSlide.onlineCount}</span> online
+                    <span className="text-emerald-400 font-bold">{currentSlide.onlineCount}</span> {t.onlineText}
                   </span>
                 )}
               </>
