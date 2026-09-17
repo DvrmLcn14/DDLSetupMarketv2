@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-export type Language = 'en' | 'tr';
+export type Language = 'en' | 'tr' | 'it' | 'de' | 'es';
 
 export const translations = {
   en: {
@@ -19,6 +19,9 @@ export const translations = {
     languageLabel: 'Language',
     turkish: 'Türkçe',
     english: 'English',
+    italian: 'Italiano',
+    german: 'Deutsch',
+    spanish: 'Español',
 
     // Marketplace Titles & Filters
     marketplaceTitle: 'F1® Telemetry & Race Setup Database',
@@ -174,6 +177,9 @@ export const translations = {
     languageLabel: 'Dil',
     turkish: 'Türkçe',
     english: 'English',
+    italian: 'Italiano',
+    german: 'Deutsch',
+    spanish: 'Español',
 
     // Marketplace Titles & Filters
     marketplaceTitle: 'F1® Telemetri ve Yarış Setup Veritabanı',
@@ -313,37 +319,511 @@ export const translations = {
     noSetupsFound: 'Filtrelerinize uygun setup bulunamadı.',
     resetFilters: 'Tüm Filtreleri Sıfırla',
   },
+  it: {
+    // Header & Brand
+    brandSubtitle: 'Mercato Ufficiale Setup F1 24, F1 25 & F1 26',
+    setupsTab: 'Setup',
+    favoritesTab: 'Preferiti',
+    adminReview: 'Revisione Admin',
+    panelBadge: 'Pannello',
+    submitSetup: 'Invia Setup',
+    signIn: 'Accedi',
+    register: 'Registrati',
+    signOut: 'Esci',
+
+    // Language selector label
+    languageLabel: 'Lingua',
+    turkish: 'Türkçe',
+    english: 'English',
+    italian: 'Italiano',
+    german: 'Deutsch',
+    spanish: 'Español',
+
+    // Marketplace Titles & Filters
+    marketplaceTitle: 'Database Setup di Gara e Telemetria F1®',
+    marketplaceSubtitle:
+      'Setup di telemetria esports verificati, screenshot dei tempi sul giro e schede setup per F1® 24, F1® 25 e F1® 26.',
+    searchPlaceholder: 'Cerca per circuito, auto, creatore o note...',
+    allTracks: 'Tutti i Circuiti',
+    allWeather: 'Meteo Tutti',
+    dryOnly: 'Setup Asciutto',
+    wetOnly: 'Setup Bagnato',
+    intermediate: 'Intermedio',
+    allTypes: 'Tutti i Tipi',
+    timeTrial: 'Time Trial',
+    race: 'Gara',
+    qualifying: 'Qualifica',
+
+    // Weather & Track Conditions
+    dryWeather: 'Tempo Asciutto',
+    wetWeather: 'Tempo Bagnato',
+    trackConditionAll: 'CONDIZIONI PISTA: Tutte',
+    trackConditionDry: 'CONDIZIONI PISTA: Asciutto',
+    trackConditionWet: 'CONDIZIONI PISTA: Bagnato',
+
+    // Verification & Setup Types
+    adminVerified: 'Verificato da Admin',
+    pending: 'In Attesa',
+    racePace: 'Passo Gara',
+    showing: 'Mostrando',
+    setupsCountText: 'setup',
+    filterAll: 'Tutti',
+
+    // Card Actions & Buttons
+    copySetup: 'Copia Setup',
+    copiedSetup: 'Copiato',
+    discuss: 'Discussione',
+    edit: 'Modifica',
+    delete: 'Elimina',
+    viewDetails: 'Vedi Dettagli',
+
+    // Ratings & Reviews
+    noRatingsYet: 'Nessuna valutazione',
+    ratedStar: 'Voto',
+    reviewsCountText: 'recensioni',
+    rateButton: '+ Valuta',
+
+    // Hero Header
+    activeGameLabel: 'GIOCO ATTIVO:',
+
+    // Sort options
+    sortBy: 'Ordina per',
+    highestRated: 'Valutazione Più Alta',
+    mostRecent: 'Più Recenti',
+    topSpeed: 'Velocità Massima',
+    mostFavorited: 'Più Preferiti',
+    mostDownloaded: 'Più Scaricati',
+    verifiedOnly: 'Solo Verificati',
+
+    // Status Badges
+    telemetryVerified: 'Telemetria Verificata',
+    verifiedProof: 'Prova Verificata',
+    pendingVerification: 'In Attesa di Verifica',
+    rejected: 'Rifiutato',
+
+    // Setup Card & Modal
+    viewSetup: 'Visualizza Setup',
+    setupCopied: 'Setup Copiato!',
+    downloadSetup: 'Scarica Setup',
+    bestLapTime: 'Miglior Tempo sul Giro',
+    downforceLevel: 'Carico Aerodinamico',
+    creator: 'Creatore',
+    addedDate: 'Aggiunto',
+    downloads: 'Download',
+    favorites: 'Preferiti',
+
+    // Tuning Spec Categories
+    aerodynamics: 'Aerodinamica',
+    frontWing: 'Ala Anteriore',
+    rearWing: 'Ala Posteriore',
+
+    transmission: 'Trasmissione e Differenziale',
+    diffOnThrottle: 'Differenziale in Accelerazione',
+    diffOffThrottle: 'Differenziale in Rilascio',
+
+    suspensionGeometry: 'Geometria Sospensioni',
+    frontCamber: 'Camber Anteriore',
+    rearCamber: 'Camber Posteriore',
+    frontToe: 'Toe Anteriore',
+    rearToe: 'Toe Posteriore',
+
+    suspension: 'Sospensioni e Barre Antirollio',
+    frontSuspension: 'Sospensione Anteriore',
+    rearSuspension: 'Sospensione Posteriore',
+    frontAntiRollBar: 'Barra Antirollio Anteriore',
+    rearAntiRollBar: 'Barra Antirollio Posteriore',
+    frontRideHeight: 'Altezza da Terra Anteriore',
+    rearRideHeight: 'Altezza da Terra Posteriore',
+
+    brakes: 'Freni',
+    brakePressure: 'Pressione Freni',
+    brakeBias: 'Bilanciamento Freni',
+
+    tyres: 'Pressione Pneumatici',
+    frontLeftTyre: 'Anteriore Sinistra',
+    frontRightTyre: 'Anteriore Destra',
+    rearLeftTyre: 'Posteriore Sinistra',
+    rearRightTyre: 'Posteriore Destra',
+
+    notesAndStrategy: 'Note del Creatore e Strategia',
+    reviewsAndDiscussions: 'Discussioni e Recensioni',
+    writeReviewPlaceholder: 'Condividi un feedback o fai una domanda...',
+    submitReview: 'Invia Recensione',
+    noReviewsYet: 'Nessuna recensione per questo setup. Sii il primo!',
+
+    // Submit Modal
+    submitModalTitle: 'Invia Scheda Setup F1 e Telemetria',
+    submitModalSubtitle: 'Condividi il tuo setup esports con screenshot di tempo e telemetria.',
+    setupTitleLabel: 'Titolo Setup',
+    gameLabel: 'Versione Gioco',
+    trackLabel: 'Circuito',
+    carLabel: 'Modello Auto',
+    lapTimeLabel: 'Miglior Tempo (es. 1:28.452)',
+    conditionLabel: 'Condizioni Meteo',
+    typeLabel: 'Tipo Sessione',
+    notesLabel: 'Note Setup / Consigli di Guida',
+    proofScreenshotLabel: 'Prova Screenshot Telemetria / Tempo',
+    submitButtonText: 'Invia Setup per la Verifica',
+    closeModal: 'Chiudi',
+
+    // Floating Banner Ads
+    adBadgeText: 'PUBBLICITÀ',
+    announcementBadge1: 'ANNUNCIO 1',
+    announcementBadge2: 'ANNUNCIO 2',
+    sponsorBadge: 'SPONSOR / PUBBLICITÀ',
+    onlineText: 'online',
+
+    // No Results
+    noSetupsFound: 'Nessun setup trovato con i filtri attivi.',
+    resetFilters: 'Ripristina Filtri',
+  },
+  de: {
+    // Header & Brand
+    brandSubtitle: 'Offizieller F1 24, F1 25 & F1 26 Setup-Marktplatz',
+    setupsTab: 'Setups',
+    favoritesTab: 'Favoriten',
+    adminReview: 'Admin-Prüfung',
+    panelBadge: 'Konsole',
+    submitSetup: 'Setup Einreichen',
+    signIn: 'Anmelden',
+    register: 'Registrieren',
+    signOut: 'Abmelden',
+
+    // Language selector label
+    languageLabel: 'Sprache',
+    turkish: 'Türkçe',
+    english: 'English',
+    italian: 'Italiano',
+    german: 'Deutsch',
+    spanish: 'Español',
+
+    // Marketplace Titles & Filters
+    marketplaceTitle: 'F1® Telemetrie & Renn-Setup-Datenbank',
+    marketplaceSubtitle:
+      'Verifizierte Esports-Telemetrie-Setups, Rundenzeit-Screenshots und Setup-Blätter für F1® 24, F1® 25 und F1® 26.',
+    searchPlaceholder: 'Suche nach Strecke, Auto, Ersteller oder Notizen...',
+    allTracks: 'Alle Strecken',
+    allWeather: 'Alle Wetter',
+    dryOnly: 'Trocken-Setups',
+    wetOnly: 'Nass-Setups',
+    intermediate: 'Intermediates',
+    allTypes: 'Alle Typen',
+    timeTrial: 'Zeitfahren',
+    race: 'Rennen',
+    qualifying: 'Qualifikation',
+
+    // Weather & Track Conditions
+    dryWeather: 'Trockenes Wetter',
+    wetWeather: 'Nasses Wetter',
+    trackConditionAll: 'STRECKENZUSTAND: Alle',
+    trackConditionDry: 'STRECKENZUSTAND: Trocken',
+    trackConditionWet: 'STRECKENZUSTAND: Nass',
+
+    // Verification & Setup Types
+    adminVerified: 'Admin Verifiziert',
+    pending: 'Ausstehend',
+    racePace: 'Rennpace',
+    showing: 'Angezeigt',
+    setupsCountText: 'Setups',
+    filterAll: 'Alle',
+
+    // Card Actions & Buttons
+    copySetup: 'Setup Kopieren',
+    copiedSetup: 'Kopiert',
+    discuss: 'Diskutieren',
+    edit: 'Bearbeiten',
+    delete: 'Löschen',
+    viewDetails: 'Details Ansehen',
+
+    // Ratings & Reviews
+    noRatingsYet: 'Noch keine Bewertung',
+    ratedStar: 'Bewertet',
+    reviewsCountText: 'Bewertungen',
+    rateButton: '+ Bewerten',
+
+    // Hero Header
+    activeGameLabel: 'AKTIVES SPIEL:',
+
+    // Sort options
+    sortBy: 'Sortieren nach',
+    highestRated: 'Höchste Bewertung',
+    mostRecent: 'Neueste',
+    topSpeed: 'Höchstgeschwindigkeit',
+    mostFavorited: 'Beliebteste',
+    mostDownloaded: 'Meistgeladen',
+    verifiedOnly: 'Nur Verifizierte',
+
+    // Status Badges
+    telemetryVerified: 'Telemetrie Verifiziert',
+    verifiedProof: 'Nachweis Verifiziert',
+    pendingVerification: 'Ausstehende Verifizierung',
+    rejected: 'Abgelehnt',
+
+    // Setup Card & Modal
+    viewSetup: 'Setup Ansehen',
+    setupCopied: 'Setup Kopiert!',
+    downloadSetup: 'Setup Herunterladen',
+    bestLapTime: 'Beste Rundenzeit',
+    downforceLevel: 'Abtrieb (Downforce)',
+    creator: 'Ersteller',
+    addedDate: 'Hinzugefügt',
+    downloads: 'Downloads',
+    favorites: 'Favoriten',
+
+    // Tuning Spec Categories
+    aerodynamics: 'Aerodynamik',
+    frontWing: 'Vorderflügel',
+    rearWing: 'Heckflügel',
+
+    transmission: 'Getriebe & Differenzial',
+    diffOnThrottle: 'Differenzial bei Gas',
+    diffOffThrottle: 'Differenzial ohne Gas',
+
+    suspensionGeometry: 'Aufhängungsgeometrie',
+    frontCamber: 'Sturz Vorne',
+    rearCamber: 'Sturz Hinten',
+    frontToe: 'Spur Vorne',
+    rearToe: 'Spur Hinten',
+
+    suspension: 'Aufhängung & Stabilisator',
+    frontSuspension: 'Vorderradaufhängung',
+    rearSuspension: 'Hinterradaufhängung',
+    frontAntiRollBar: 'Stabilisator Vorne',
+    rearAntiRollBar: 'Stabilisator Hinten',
+    frontRideHeight: 'Bodenfreiheit Vorne',
+    rearRideHeight: 'Bodenfreiheit Hinten',
+
+    brakes: 'Bremsen',
+    brakePressure: 'Bremsdruck',
+    brakeBias: 'Bremskraftverteilung',
+
+    tyres: 'Reifendruck',
+    frontLeftTyre: 'Vorne Links',
+    frontRightTyre: 'Vorne Rechts',
+    rearLeftTyre: 'Hinten Links',
+    rearRightTyre: 'Hinten Rechts',
+
+    notesAndStrategy: 'Ersteller-Notizen & Strategie',
+    reviewsAndDiscussions: 'Diskussionen & Bewertungen',
+    writeReviewPlaceholder: 'Feedback teilen oder Fragen stellen...',
+    submitReview: 'Bewertung Senden',
+    noReviewsYet: 'Noch keine Bewertungen. Sei der Erste!',
+
+    // Submit Modal
+    submitModalTitle: 'F1 Setup-Blatt & Telemetrie Einreichen',
+    submitModalSubtitle: 'Teile dein Esports-Setup mit Rundenzeit-Nachweis und Telemetrie-Screenshots.',
+    setupTitleLabel: 'Setup-Titel',
+    gameLabel: 'Spielversion',
+    trackLabel: 'Strecke',
+    carLabel: 'Fahrzeugmodell',
+    lapTimeLabel: 'Beste Rundenzeit (z.B. 1:28.452)',
+    conditionLabel: 'Wetterbedingungen',
+    typeLabel: 'Session-Typ',
+    notesLabel: 'Setup-Notizen / Fahr-Tipps',
+    proofScreenshotLabel: 'Rundenzeit / Telemetrie-Screenshot Nachweis',
+    submitButtonText: 'Setup zur Prüfung Einreichen',
+    closeModal: 'Schließen',
+
+    // Floating Banner Ads
+    adBadgeText: 'WERBUNG',
+    announcementBadge1: 'ANKÜNDIGUNG 1',
+    announcementBadge2: 'ANKÜNDIGUNG 2',
+    sponsorBadge: 'SPONSOR / WERBUNG',
+    onlineText: 'online',
+
+    // No Results
+    noSetupsFound: 'Keine Setups mit diesen Filtern gefunden.',
+    resetFilters: 'Alle Filter Zurücksetzen',
+  },
+  es: {
+    // Header & Brand
+    brandSubtitle: 'Mercado Oficial de Setups F1 24, F1 25 & F1 26',
+    setupsTab: 'Setups',
+    favoritesTab: 'Favoritos',
+    adminReview: 'Revisión de Admin',
+    panelBadge: 'Panel',
+    submitSetup: 'Enviar Setup',
+    signIn: 'Iniciar Sesión',
+    register: 'Registrarse',
+    signOut: 'Cerrar Sesión',
+
+    // Language selector label
+    languageLabel: 'Idioma',
+    turkish: 'Türkçe',
+    english: 'English',
+    italian: 'Italiano',
+    german: 'Deutsch',
+    spanish: 'Español',
+
+    // Marketplace Titles & Filters
+    marketplaceTitle: 'Base de Datos de Telemetría y Setups de F1®',
+    marketplaceSubtitle:
+      'Setups de telemetría esports verificados, capturas de pantalla de tiempos de vuelta y hojas de setup para F1® 24, F1® 25 y F1® 26.',
+    searchPlaceholder: 'Buscar por circuito, coche, creador o notas...',
+    allTracks: 'Todos los Circuitos',
+    allWeather: 'Todo Clima',
+    dryOnly: 'Setups en Seco',
+    wetOnly: 'Setups en Mojado',
+    intermediate: 'Intermedio',
+    allTypes: 'Todos los Tipos',
+    timeTrial: 'Contrarreloj',
+    race: 'Carrera',
+    qualifying: 'Clasificación',
+
+    // Weather & Track Conditions
+    dryWeather: 'Clima Seco',
+    wetWeather: 'Clima Lluvioso',
+    trackConditionAll: 'ESTADO DE PISTA: Todos',
+    trackConditionDry: 'ESTADO DE PISTA: Seco',
+    trackConditionWet: 'ESTADO DE PISTA: Mojado',
+
+    // Verification & Setup Types
+    adminVerified: 'Verificado por Admin',
+    pending: 'Pendiente',
+    racePace: 'Ritmo de Carrera',
+    showing: 'Mostrando',
+    setupsCountText: 'setups',
+    filterAll: 'Todos',
+
+    // Card Actions & Buttons
+    copySetup: 'Copiar Setup',
+    copiedSetup: 'Copiado',
+    discuss: 'Discusión',
+    edit: 'Editar',
+    delete: 'Eliminar',
+    viewDetails: 'Ver Detalles',
+
+    // Ratings & Reviews
+    noRatingsYet: 'Sin valoraciones',
+    ratedStar: 'Valoración',
+    reviewsCountText: 'reseñas',
+    rateButton: '+ Valorar',
+
+    // Hero Header
+    activeGameLabel: 'JUEGO ACTIVO:',
+
+    // Sort options
+    sortBy: 'Ordenar por',
+    highestRated: 'Mejor Valorado',
+    mostRecent: 'Más Recientes',
+    topSpeed: 'Velocidad Máxima',
+    mostFavorited: 'Más Favoritos',
+    mostDownloaded: 'Más Descargados',
+    verifiedOnly: 'Solo Verificados',
+
+    // Status Badges
+    telemetryVerified: 'Telemetría Verificada',
+    verifiedProof: 'Prueba Verificada',
+    pendingVerification: 'Verificación Pendiente',
+    rejected: 'Rechazado',
+
+    // Setup Card & Modal
+    viewSetup: 'Ver Setup',
+    setupCopied: '¡Setup Copiado!',
+    downloadSetup: 'Descargar Setup',
+    bestLapTime: 'Mejor Tiempo de Vuelta',
+    downforceLevel: 'Carga Aerodinámica',
+    creator: 'Creador',
+    addedDate: 'Añadido',
+    downloads: 'Descargas',
+    favorites: 'Favoritos',
+
+    // Tuning Spec Categories
+    aerodynamics: 'Aerodinámica',
+    frontWing: 'Alerón Delantero',
+    rearWing: 'Alerón Trasero',
+
+    transmission: 'Transmisión y Diferencial',
+    diffOnThrottle: 'Diferencial con Acelerador',
+    diffOffThrottle: 'Diferencial sin Acelerador',
+
+    suspensionGeometry: 'Geometría de Suspensión',
+    frontCamber: 'Cámber Delantero',
+    rearCamber: 'Cámber Trasero',
+    frontToe: 'Convergencia Delantera',
+    rearToe: 'Convergencia Trasera',
+
+    suspension: 'Suspensión y Barras Estabilizadoras',
+    frontSuspension: 'Suspensión Delantera',
+    rearSuspension: 'Suspensión Trasera',
+    frontAntiRollBar: 'Barra Estabilizadora Delantera',
+    rearAntiRollBar: 'Barra Estabilizadora Trasera',
+    frontRideHeight: 'Altura de Chasis Delantera',
+    rearRideHeight: 'Altura de Chasis Trasera',
+
+    brakes: 'Frenos',
+    brakePressure: 'Presión de Freno',
+    brakeBias: 'Reparto de Frenada',
+
+    tyres: 'Presión de Neumáticos',
+    frontLeftTyre: 'Delantero Izquierdo',
+    frontRightTyre: 'Delantero Derecho',
+    rearLeftTyre: 'Trasero Izquierdo',
+    rearRightTyre: 'Trasero Derecho',
+
+    notesAndStrategy: 'Notas del Creador y Estrategia',
+    reviewsAndDiscussions: 'Discusiones y Reseñas',
+    writeReviewPlaceholder: 'Comparte tus comentarios o haz preguntas...',
+    submitReview: 'Publicar Reseña',
+    noReviewsYet: 'Aún no hay reseñas. ¡Sé el primero en opinar!',
+
+    // Submit Modal
+    submitModalTitle: 'Enviar Hoja de Setup F1 y Telemetría',
+    submitModalSubtitle: 'Comparte tu setup de esports con prueba de tiempo de vuelta y capturas.',
+    setupTitleLabel: 'Título del Setup',
+    gameLabel: 'Versión del Juego',
+    trackLabel: 'Circuito',
+    carLabel: 'Modelo del Coche',
+    lapTimeLabel: 'Mejor Tiempo de Vuelta (ej. 1:28.452)',
+    conditionLabel: 'Condición Climática',
+    typeLabel: 'Tipo de Sesión',
+    notesLabel: 'Notas de Setup / Consejos de Conducción',
+    proofScreenshotLabel: 'Captura de Pantalla de Prueba de Tiempo / Telemetría',
+    submitButtonText: 'Enviar Setup para Verificación',
+    closeModal: 'Cerrar',
+
+    // Floating Banner Ads
+    adBadgeText: 'PUBLICIDAD',
+    announcementBadge1: 'ANUNCIO 1',
+    announcementBadge2: 'ANUNCIO 2',
+    sponsorBadge: 'PATROCINADOR / AD',
+    onlineText: 'en línea',
+
+    // No Results
+    noSetupsFound: 'No se encontraron setups con los filtros activos.',
+    resetFilters: 'Restablecer Filtros',
+  },
 };
 
-export const countryTranslations: Record<string, string> = {
-  Belgium: 'Belçika',
-  'Great Britain': 'Büyük Britanya',
-  Italy: 'İtalya',
-  Spain: 'İspanya',
-  Netherlands: 'Hollanda',
-  Japan: 'Japonya',
-  Bahrain: 'Bahreyn',
-  'Saudi Arabia': 'Suudi Arabistan',
-  Australia: 'Avustralya',
-  China: 'Çin',
-  Miami: 'Miami',
-  Monaco: 'Monako',
-  Canada: 'Kanada',
-  Austria: 'Avusturya',
-  Hungary: 'Macaristan',
-  Singapore: 'Singapur',
-  'United States': 'Amerika Birleşik Devletleri',
-  Mexico: 'Meksika',
-  Brazil: 'Brezilya',
-  'Las Vegas': 'Las Vegas',
-  Qatar: 'Katar',
-  'Abu Dhabi': 'Abu Dabi',
-  Azerbaijan: 'Azerbaycan',
+export const countryTranslations: Record<string, Partial<Record<Language, string>>> = {
+  Belgium: { tr: 'Belçika', it: 'Belgio', de: 'Belgien', es: 'Bélgica' },
+  'Great Britain': { tr: 'Büyük Britanya', it: 'Gran Bretagna', de: 'Großbritannien', es: 'Gran Bretaña' },
+  Italy: { tr: 'İtalya', it: 'Italia', de: 'Italien', es: 'Italia' },
+  Spain: { tr: 'İspanya', it: 'Spagna', de: 'Spanien', es: 'España' },
+  Netherlands: { tr: 'Hollanda', it: 'Paesi Bassi', de: 'Niederlande', es: 'Países Bajos' },
+  Japan: { tr: 'Japonya', it: 'Giappone', de: 'Japan', es: 'Japón' },
+  Bahrain: { tr: 'Bahreyn', it: 'Bahrein', de: 'Bahrain', es: 'Bahréin' },
+  'Saudi Arabia': { tr: 'Suudi Arabistan', it: 'Arabia Saudita', de: 'Saudi-Arabien', es: 'Arabia Saudita' },
+  Australia: { tr: 'Avustralya', it: 'Australia', de: 'Australien', es: 'Australia' },
+  China: { tr: 'Çin', it: 'Cina', de: 'China', es: 'China' },
+  Miami: { tr: 'Miami', it: 'Miami', de: 'Miami', es: 'Miami' },
+  Monaco: { tr: 'Monako', it: 'Monaco', de: 'Monaco', es: 'Mónaco' },
+  Canada: { tr: 'Kanada', it: 'Canada', de: 'Kanada', es: 'Canadá' },
+  Austria: { tr: 'Avusturya', it: 'Austria', de: 'Österreich', es: 'Austria' },
+  Hungary: { tr: 'Macaristan', it: 'Ungheria', de: 'Ungarn', es: 'Hungría' },
+  Singapore: { tr: 'Singapur', it: 'Singapore', de: 'Singapur', es: 'Singapur' },
+  'United States': { tr: 'Amerika Birleşik Devletleri', it: 'Stati Uniti', de: 'Vereinigte Staaten', es: 'Estados Unidos' },
+  Mexico: { tr: 'Meksika', it: 'Messico', de: 'Mexiko', es: 'México' },
+  Brazil: { tr: 'Brezilya', it: 'Brasile', de: 'Brasilien', es: 'Brasil' },
+  'Las Vegas': { tr: 'Las Vegas', it: 'Las Vegas', de: 'Las Vegas', es: 'Las Vegas' },
+  Qatar: { tr: 'Katar', it: 'Qatar', de: 'Katar', es: 'Catar' },
+  'Abu Dhabi': { tr: 'Abu Dabi', it: 'Abu Dhabi', de: 'Abu Dhabi', es: 'Abu Dabi' },
+  Azerbaijan: { tr: 'Azerbaycan', it: 'Azerbaigian', de: 'Aserbaidschan', es: 'Azerbaiyán' },
 };
 
 export function translateLocation(country: string, lang: Language): string {
-  if (lang === 'tr' && countryTranslations[country]) {
-    return countryTranslations[country];
+  if (countryTranslations[country] && countryTranslations[country][lang]) {
+    return countryTranslations[country][lang]!;
   }
   return country;
 }
@@ -361,8 +841,8 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguage] = useState<Language>(() => {
     try {
-      const saved = localStorage.getItem('ddl_language');
-      if (saved === 'tr' || saved === 'en') return saved;
+      const saved = localStorage.getItem('ddl_language') as Language;
+      if (['en', 'tr', 'it', 'de', 'es'].includes(saved)) return saved;
     } catch {
       // ignore fallback
     }

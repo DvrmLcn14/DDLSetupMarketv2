@@ -1,7 +1,7 @@
 import React from 'react';
-import { Plus, LogOut, Bookmark, ShieldCheck, Globe } from 'lucide-react';
+import { Plus, LogOut, Bookmark, ShieldCheck } from 'lucide-react';
 import { SupportedF1GameId, SimGame, UserAccount } from '../types';
-import { useLanguage } from '../i18n/LanguageContext';
+import { useLanguage, Language } from '../i18n/LanguageContext';
 
 interface DesktopHeaderProps {
   activeGame: SimGame;
@@ -16,6 +16,14 @@ interface DesktopHeaderProps {
   onOpenAdminPanel?: () => void;
   pendingAdminCount?: number;
 }
+
+const LANGUAGES: { code: Language; flag: string; label: string }[] = [
+  { code: 'en', flag: '🇬🇧', label: 'English' },
+  { code: 'tr', flag: '🇹🇷', label: 'Türkçe' },
+  { code: 'it', flag: '🇮🇹', label: 'Italiano' },
+  { code: 'de', flag: '🇩🇪', label: 'Deutsch' },
+  { code: 'es', flag: '🇪🇸', label: 'Español' },
+];
 
 export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
   activeGame,
@@ -130,38 +138,27 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
           </div>
         </div>
 
-        {/* Right Actions: Language Switcher, Submit F1 Setup, Admin Review & Account */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Clean Language Switcher Toggle */}
-          <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 shadow-inner">
-            <button
-              type="button"
-              id="lang-toggle-en"
-              onClick={() => setLanguage('en')}
-              title="Switch to English"
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer ${
-                language === 'en'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-            >
-              <span>🇬🇧</span>
-              <span>EN</span>
-            </button>
-            <button
-              type="button"
-              id="lang-toggle-tr"
-              onClick={() => setLanguage('tr')}
-              title="Türkçe'ye Geç"
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer ${
-                language === 'tr'
-                  ? 'bg-red-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-            >
-              <span>🇹🇷</span>
-              <span>TR</span>
-            </button>
+        {/* Right Actions: Multi-language Switcher Toggle, Submit F1 Setup, Admin Review & Account */}
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          {/* Expanded 5-Language Switcher Toggle */}
+          <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 shadow-inner gap-0.5">
+            {LANGUAGES.map((lang) => (
+              <button
+                key={lang.code}
+                type="button"
+                id={`lang-toggle-${lang.code}`}
+                onClick={() => setLanguage(lang.code)}
+                title={lang.label}
+                className={`px-2 py-1 rounded-lg text-[11px] font-extrabold flex items-center gap-1 transition-all cursor-pointer ${
+                  language === lang.code
+                    ? 'bg-red-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                }`}
+              >
+                <span>{lang.flag}</span>
+                <span>{lang.code.toUpperCase()}</span>
+              </button>
+            ))}
           </div>
 
           {/* Admin Verification Review Button */}
