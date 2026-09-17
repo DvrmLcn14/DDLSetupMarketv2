@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  X,
   ExternalLink,
   ChevronLeft,
   ChevronRight,
@@ -20,8 +19,8 @@ import { FloatingBannerConfig, FloatingBannerItem } from '../types';
  * =========================================================================
  *  QUICK CONFIGURATION: EDIT YOUR ADVERTISEMENTS & ANNOUNCEMENTS HERE
  * =========================================================================
- * You can easily edit titles, descriptions, badge tags, and button URLs below.
- * Add new items or modify existing ones without touching any UI code!
+ * Modify, add, or replace slides in this array. The component will
+ * automatically rotate through all items every 5 seconds.
  * =========================================================================
  */
 export const adsData: FloatingBannerItem[] = [
@@ -42,7 +41,7 @@ export const adsData: FloatingBannerItem[] = [
     id: 'custom-announcement-slot',
     badgeText: 'ANNOUNCEMENT',
     title: 'Custom Announcement Slot',
-    highlightText: 'Custom Slot',
+    highlightText: 'Featured',
     description:
       'Easily customize this slot with your partner links, sponsors, race leagues, or setup guides.',
     buttonText: 'Configure Link',
@@ -53,7 +52,7 @@ export const adsData: FloatingBannerItem[] = [
   },
 ];
 
-// Configuration constants
+// Configuration constants: 5-second automatic rotation
 export const BANNER_ROTATION_INTERVAL_SECONDS = 5;
 
 interface FloatingBannerProps {
@@ -77,7 +76,7 @@ export const DiscordIcon: React.FC<{ className?: string }> = ({ className = 'w-5
   </svg>
 );
 
-// Color theme styles
+// Color theme styling map
 const themeMap: Record<
   string,
   {
@@ -144,15 +143,6 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
   onSaveConfig,
   isAdmin = false,
 }) => {
-  const [isVisible, setIsVisible] = useState<boolean>(() => {
-    try {
-      const isDismissed = localStorage.getItem('ddl_floating_banner_dismissed');
-      return isDismissed !== 'true';
-    } catch {
-      return true;
-    }
-  });
-
   // Active slide index (0 = Slide 1, 1 = Slide 2, etc.)
   const [currentSlideIndex, setCurrentSlideIndex] = useState<number>(0);
   const [isPaused, setIsPaused] = useState<boolean>(false);
@@ -175,7 +165,7 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
   const activeIndex = Math.min(currentSlideIndex, slides.length - 1);
   const currentSlide = slides[activeIndex] || adsData[0];
 
-  // Inline form state
+  // Inline form state for admin
   const [editFormData, setEditFormData] = useState<FloatingBannerItem>({ ...currentSlide });
 
   // Sync form when active slide changes
@@ -185,43 +175,21 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
     }
   }, [currentSlideIndex, currentSlide, isEditingInline]);
 
-  // Auto-rotation timer (5 seconds)
+  // Reliable Auto-rotation timer: Rotates every 5 seconds
   useEffect(() => {
-    const isAutoRotateEnabled = config?.autoRotate !== false;
-    if (!isAutoRotateEnabled || isPaused || isEditingInline || slides.length <= 1) {
+    if (isPaused || isEditingInline || slides.length <= 1) {
       return;
     }
 
     const intervalSeconds = config?.intervalSeconds || BANNER_ROTATION_INTERVAL_SECONDS;
+    const intervalMs = intervalSeconds * 1000;
+
     const timer = setInterval(() => {
       setCurrentSlideIndex((prev) => (prev + 1) % slides.length);
-    }, intervalSeconds * 1000);
+    }, intervalMs);
 
     return () => clearInterval(timer);
-  }, [config?.autoRotate, config?.intervalSeconds, isPaused, isEditingInline, slides.length]);
-
-  if (config && config.enabled === false) return null;
-
-  const handleDismiss = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsVisible(false);
-    try {
-      localStorage.setItem('ddl_floating_banner_dismissed', 'true');
-    } catch (e) {
-      console.warn('Could not persist banner dismissal', e);
-    }
-  };
-
-  const handleReopen = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsVisible(true);
-    try {
-      localStorage.removeItem('ddl_floating_banner_dismissed');
-      localStorage.removeItem('ddl_floating_banner_dismissed_slots');
-    } catch (e) {
-      console.warn('Could not reset banner dismissal', e);
-    }
-  };
+  }, [config?.intervalSeconds, isPaused, isEditingInline, slides.length]);
 
   const handleNextSlide = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -337,24 +305,6 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
     return <DiscordIcon className="w-5 h-5 text-white" />;
   };
 
-  // If dismissed, show reopen pill in bottom-right corner
-  if (!isVisible) {
-    return (
-      <button
-        type="button"
-        id="reopen-discord-banner-btn"
-        onClick={handleReopen}
-        title="Open PRL League & Announcements"
-        className="fixed bottom-4 right-4 z-40 bg-slate-900/95 hover:bg-[#5865F2] text-slate-300 hover:text-white border border-slate-700 hover:border-transparent p-2.5 rounded-full shadow-xl transition-all duration-200 flex items-center gap-2 group cursor-pointer"
-      >
-        <DiscordIcon className="w-5 h-5 text-[#5865F2] group-hover:text-white transition-colors" />
-        <span className="text-xs font-bold pr-1 hidden group-hover:inline-block transition-all">
-          Announcements (1/{slides.length})
-        </span>
-      </button>
-    );
-  }
-
   const handleCardClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     if (
@@ -391,7 +341,7 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
       <div className={`h-1.5 w-full bg-gradient-to-r ${currentTheme.gradient}`} />
 
       <div className="p-4 space-y-3">
-        {/* Top bar: Badge, Online count, Page Numbers (1/2), Controls & Close [X] */}
+        {/* Top bar: Badge, Online count, Page Indicators (1/2), Prev/Next controls */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 flex-wrap min-w-0">
             {isEditingInline ? (
@@ -416,7 +366,7 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
             )}
           </div>
 
-          <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
             {/* Slider Controls: Prev (<), Slide Indicator (1/2), Next (>) */}
             {!isEditingInline && (
               <div className="flex items-center bg-slate-950/80 rounded-lg border border-slate-800 p-0.5 gap-0.5">
@@ -473,17 +423,6 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
                 </span>
               </button>
             )}
-
-            {/* Close [X] Button */}
-            <button
-              type="button"
-              id="close-floating-banner-btn"
-              onClick={handleDismiss}
-              title="Close Ad Box"
-              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
           </div>
         </div>
 
@@ -516,7 +455,7 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
                 <button
                   type="button"
                   onClick={handleResetToDefaultAds}
-                  title="Reset to adsData defined in FloatingBanner.tsx"
+                  title="Reset to default adsData defined in FloatingBanner.tsx"
                   className="text-[10px] text-slate-400 hover:text-amber-300 flex items-center gap-0.5 cursor-pointer"
                 >
                   <RotateCcw className="w-2.5 h-2.5" />
@@ -716,7 +655,7 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
               </a>
             </div>
 
-            {/* Slide Indicator Dots (2 dots) */}
+            {/* Slide Indicator Dots */}
             <div className="flex items-center justify-center gap-1.5 pt-0.5">
               {slides.map((_, idx) => (
                 <button
