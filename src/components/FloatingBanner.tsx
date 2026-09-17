@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   ExternalLink,
+  ChevronLeft,
+  ChevronRight,
   Sparkles,
   Trophy,
   Zap,
@@ -10,12 +12,52 @@ import {
   Edit3,
   Check,
   Save,
+  RotateCcw,
 } from 'lucide-react';
 import { FloatingBannerConfig, FloatingBannerItem } from '../types';
-import { DEFAULT_FLOATING_BANNER_ITEMS } from '../data/bannerConfig';
+
+/**
+ * =========================================================================
+ *  QUICK CONFIGURATION: EDIT YOUR ADVERTISEMENTS & ANNOUNCEMENTS HERE
+ * =========================================================================
+ * You can easily edit titles, descriptions, badge tags, and button URLs below.
+ * Add new items or modify existing ones without touching any UI code!
+ * =========================================================================
+ */
+export const adsData: FloatingBannerItem[] = [
+  {
+    id: 'prl-league-ad',
+    badgeText: 'ADVERTISEMENT',
+    title: 'Join PRL League',
+    highlightText: 'Official League',
+    description:
+      'Access exclusive PRL League setups, race results, and connect with fellow league drivers.',
+    buttonText: 'Join PRL League',
+    buttonUrl: 'https://discord.gg/aFzAhfBy3',
+    onlineCount: 428,
+    iconType: 'discord',
+    accentColor: 'indigo',
+  },
+  {
+    id: 'custom-announcement-slot',
+    badgeText: 'ANNOUNCEMENT',
+    title: 'Custom Announcement Slot',
+    highlightText: 'Custom Slot',
+    description:
+      'Easily customize this slot with your partner links, sponsors, race leagues, or setup guides.',
+    buttonText: 'Configure Link',
+    buttonUrl: 'https://discord.gg/aFzAhfBy3',
+    onlineCount: 150,
+    iconType: 'sparkles',
+    accentColor: 'amber',
+  },
+];
+
+// Configuration constants
+export const BANNER_ROTATION_INTERVAL_SECONDS = 5;
 
 interface FloatingBannerProps {
-  config: FloatingBannerConfig;
+  config?: FloatingBannerConfig;
   items?: FloatingBannerItem[];
   onOpenSettings?: () => void;
   onSaveConfig?: (updated: FloatingBannerConfig) => void;
@@ -35,6 +77,68 @@ export const DiscordIcon: React.FC<{ className?: string }> = ({ className = 'w-5
   </svg>
 );
 
+// Color theme styles
+const themeMap: Record<
+  string,
+  {
+    border: string;
+    glow: string;
+    badgeBg: string;
+    iconBg: string;
+    buttonBg: string;
+    gradient: string;
+  }
+> = {
+  indigo: {
+    border: 'border-indigo-500/40 hover:border-indigo-500/70',
+    glow: 'shadow-indigo-950/60 hover:shadow-indigo-600/20',
+    badgeBg: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40',
+    iconBg: 'bg-[#5865F2] text-white shadow-[#5865F2]/40',
+    buttonBg: 'bg-[#5865F2] hover:bg-[#4752C4] text-white shadow-[#5865F2]/30',
+    gradient: 'from-[#5865F2] via-indigo-400 to-sky-400',
+  },
+  red: {
+    border: 'border-red-500/40 hover:border-red-500/70',
+    glow: 'shadow-red-950/60 hover:shadow-red-600/20',
+    badgeBg: 'bg-red-500/20 text-red-300 border-red-500/40',
+    iconBg: 'bg-red-600 text-white shadow-red-600/40',
+    buttonBg: 'bg-red-600 hover:bg-red-500 text-white shadow-red-600/30',
+    gradient: 'from-red-600 via-rose-500 to-orange-400',
+  },
+  emerald: {
+    border: 'border-emerald-500/40 hover:border-emerald-500/70',
+    glow: 'shadow-emerald-950/60 hover:shadow-emerald-600/20',
+    badgeBg: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+    iconBg: 'bg-emerald-600 text-white shadow-emerald-600/40',
+    buttonBg: 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30',
+    gradient: 'from-emerald-500 via-teal-400 to-cyan-400',
+  },
+  cyan: {
+    border: 'border-cyan-500/40 hover:border-cyan-500/70',
+    glow: 'shadow-cyan-950/60 hover:shadow-cyan-600/20',
+    badgeBg: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
+    iconBg: 'bg-cyan-600 text-white shadow-cyan-600/40',
+    buttonBg: 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-cyan-600/30',
+    gradient: 'from-cyan-500 via-sky-400 to-blue-500',
+  },
+  amber: {
+    border: 'border-amber-500/40 hover:border-amber-500/70',
+    glow: 'shadow-amber-950/60 hover:shadow-amber-600/20',
+    badgeBg: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+    iconBg: 'bg-amber-600 text-white shadow-amber-600/40',
+    buttonBg: 'bg-amber-600 hover:bg-amber-500 text-white shadow-amber-600/30',
+    gradient: 'from-amber-500 via-yellow-400 to-orange-500',
+  },
+  purple: {
+    border: 'border-purple-500/40 hover:border-purple-500/70',
+    glow: 'shadow-purple-950/60 hover:shadow-purple-600/20',
+    badgeBg: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
+    iconBg: 'bg-purple-600 text-white shadow-purple-600/40',
+    buttonBg: 'bg-purple-600 hover:bg-purple-500 text-white shadow-purple-600/30',
+    gradient: 'from-purple-600 via-fuchsia-400 to-pink-500',
+  },
+};
+
 export const FloatingBanner: React.FC<FloatingBannerProps> = ({
   config,
   onSaveConfig,
@@ -49,35 +153,54 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
     }
   });
 
-  // Direct Inline Live Admin Edit Mode
+  // Active slide index (0 = Slide 1, 1 = Slide 2, etc.)
+  const [currentSlideIndex, setCurrentSlideIndex] = useState<number>(0);
+  const [isPaused, setIsPaused] = useState<boolean>(false);
+
+  // Admin inline edit mode
   const [isEditingInline, setIsEditingInline] = useState<boolean>(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<boolean>(false);
 
-  // Single dedicated advertisement slide details
-  const fallbackAd = DEFAULT_FLOATING_BANNER_ITEMS[0];
-  const primaryItem = config.items && config.items.length > 0 ? config.items[0] : fallbackAd;
+  // Determine active slides list: Use config.items if present, otherwise default to top adsData
+  const slides: FloatingBannerItem[] = React.useMemo(() => {
+    if (config?.items && config.items.length > 0) {
+      // Ensure at least 2 slides
+      const s1 = config.items[0] || adsData[0];
+      const s2 = config.items[1] || adsData[1];
+      return [s1, s2];
+    }
+    return adsData;
+  }, [config?.items]);
 
-  const currentSlide: FloatingBannerItem = {
-    id: primaryItem?.id || 'prl-league-ad',
-    title: config.title || primaryItem?.title || 'Join PRL League',
-    highlightText: config.highlightText || primaryItem?.highlightText || 'Official League',
-    description:
-      config.description ||
-      primaryItem?.description ||
-      'Access exclusive PRL League setups, race results, and connect with fellow league drivers.',
-    buttonText: config.buttonText || primaryItem?.buttonText || 'Join PRL League',
-    buttonUrl: config.buttonUrl || primaryItem?.buttonUrl || 'https://discord.gg/aFzAhfBy3',
-    badgeText: config.badgeText || primaryItem?.badgeText || 'ADVERTISEMENT',
-    onlineCount: typeof config.onlineCount === 'number' ? config.onlineCount : (primaryItem?.onlineCount || 428),
-    iconType: config.iconType || primaryItem?.iconType || 'discord',
-    customIconUrl: config.customIconUrl || primaryItem?.customIconUrl,
-    accentColor: config.accentColor || primaryItem?.accentColor || 'indigo',
-  };
+  const activeIndex = Math.min(currentSlideIndex, slides.length - 1);
+  const currentSlide = slides[activeIndex] || adsData[0];
 
+  // Inline form state
   const [editFormData, setEditFormData] = useState<FloatingBannerItem>({ ...currentSlide });
 
-  // If banner is explicitly disabled by config, return null
-  if (!config.enabled) return null;
+  // Sync form when active slide changes
+  useEffect(() => {
+    if (!isEditingInline) {
+      setEditFormData({ ...currentSlide });
+    }
+  }, [currentSlideIndex, currentSlide, isEditingInline]);
+
+  // Auto-rotation timer (5 seconds)
+  useEffect(() => {
+    const isAutoRotateEnabled = config?.autoRotate !== false;
+    if (!isAutoRotateEnabled || isPaused || isEditingInline || slides.length <= 1) {
+      return;
+    }
+
+    const intervalSeconds = config?.intervalSeconds || BANNER_ROTATION_INTERVAL_SECONDS;
+    const timer = setInterval(() => {
+      setCurrentSlideIndex((prev) => (prev + 1) % slides.length);
+    }, intervalSeconds * 1000);
+
+    return () => clearInterval(timer);
+  }, [config?.autoRotate, config?.intervalSeconds, isPaused, isEditingInline, slides.length]);
+
+  if (config && config.enabled === false) return null;
 
   const handleDismiss = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -94,30 +217,42 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
     setIsVisible(true);
     try {
       localStorage.removeItem('ddl_floating_banner_dismissed');
+      localStorage.removeItem('ddl_floating_banner_dismissed_slots');
     } catch (e) {
       console.warn('Could not reset banner dismissal', e);
     }
   };
 
-  // Direct Live Save of the advertisement details
+  const handleNextSlide = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentSlideIndex((prev) => (prev + 1) % slides.length);
+  };
+
+  const handlePrevSlide = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentSlideIndex((prev) => (prev - 1 + slides.length) % slides.length);
+  };
+
+  // Direct Live Save of the current slide
   const handleSaveInlineEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editFormData) return;
 
+    const updatedSlides = slides.map((s, idx) => (idx === activeIndex ? { ...editFormData } : s));
+
     const updatedConfig: FloatingBannerConfig = {
-      ...config,
-      items: [editFormData],
-      title: editFormData.title,
-      description: editFormData.description,
-      buttonText: editFormData.buttonText,
-      buttonUrl: editFormData.buttonUrl,
-      badgeText: editFormData.badgeText,
-      onlineCount: editFormData.onlineCount,
-      iconType: editFormData.iconType,
-      accentColor: editFormData.accentColor,
+      ...(config || { enabled: true, autoRotate: true, intervalSeconds: 5 }),
+      items: updatedSlides,
+      title: updatedSlides[0]?.title,
+      description: updatedSlides[0]?.description,
+      buttonText: updatedSlides[0]?.buttonText,
+      buttonUrl: updatedSlides[0]?.buttonUrl,
+      badgeText: updatedSlides[0]?.badgeText,
+      onlineCount: updatedSlides[0]?.onlineCount,
+      iconType: updatedSlides[0]?.iconType,
+      accentColor: updatedSlides[0]?.accentColor,
     };
 
-    // Update localStorage immediately
     try {
       localStorage.setItem('ddl_floating_banner_config', JSON.stringify(updatedConfig));
     } catch (err) {
@@ -135,75 +270,47 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
     }, 600);
   };
 
-  // Color theme mapping
-  const themeMap: Record<
-    string,
-    {
-      border: string;
-      glow: string;
-      badgeBg: string;
-      iconBg: string;
-      buttonBg: string;
-      gradient: string;
+  // Reset to top adsData
+  const handleResetToDefaultAds = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updatedConfig: FloatingBannerConfig = {
+      ...(config || { enabled: true, autoRotate: true, intervalSeconds: 5 }),
+      items: adsData,
+      title: adsData[0].title,
+      description: adsData[0].description,
+      buttonText: adsData[0].buttonText,
+      buttonUrl: adsData[0].buttonUrl,
+      badgeText: adsData[0].badgeText,
+      onlineCount: adsData[0].onlineCount,
+      iconType: adsData[0].iconType,
+      accentColor: adsData[0].accentColor,
+    };
+
+    try {
+      localStorage.setItem('ddl_floating_banner_config', JSON.stringify(updatedConfig));
+    } catch (err) {
+      console.warn('Could not reset banner config', err);
     }
-  > = {
-    indigo: {
-      border: 'border-indigo-500/40 hover:border-indigo-500/70',
-      glow: 'shadow-indigo-950/60 hover:shadow-indigo-600/20',
-      badgeBg: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40',
-      iconBg: 'bg-[#5865F2] text-white shadow-[#5865F2]/40',
-      buttonBg: 'bg-[#5865F2] hover:bg-[#4752C4] text-white shadow-[#5865F2]/30',
-      gradient: 'from-[#5865F2] via-indigo-400 to-sky-400',
-    },
-    red: {
-      border: 'border-red-500/40 hover:border-red-500/70',
-      glow: 'shadow-red-950/60 hover:shadow-red-600/20',
-      badgeBg: 'bg-red-500/20 text-red-300 border-red-500/40',
-      iconBg: 'bg-red-600 text-white shadow-red-600/40',
-      buttonBg: 'bg-red-600 hover:bg-red-500 text-white shadow-red-600/30',
-      gradient: 'from-red-600 via-rose-500 to-orange-400',
-    },
-    emerald: {
-      border: 'border-emerald-500/40 hover:border-emerald-500/70',
-      glow: 'shadow-emerald-950/60 hover:shadow-emerald-600/20',
-      badgeBg: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
-      iconBg: 'bg-emerald-600 text-white shadow-emerald-600/40',
-      buttonBg: 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30',
-      gradient: 'from-emerald-500 via-teal-400 to-cyan-400',
-    },
-    cyan: {
-      border: 'border-cyan-500/40 hover:border-cyan-500/70',
-      glow: 'shadow-cyan-950/60 hover:shadow-cyan-600/20',
-      badgeBg: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
-      iconBg: 'bg-cyan-600 text-white shadow-cyan-600/40',
-      buttonBg: 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-cyan-600/30',
-      gradient: 'from-cyan-500 via-sky-400 to-blue-500',
-    },
-    amber: {
-      border: 'border-amber-500/40 hover:border-amber-500/70',
-      glow: 'shadow-amber-950/60 hover:shadow-amber-600/20',
-      badgeBg: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
-      iconBg: 'bg-amber-600 text-white shadow-amber-600/40',
-      buttonBg: 'bg-amber-600 hover:bg-amber-500 text-white shadow-amber-600/30',
-      gradient: 'from-amber-500 via-yellow-400 to-orange-500',
-    },
-    purple: {
-      border: 'border-purple-500/40 hover:border-purple-500/70',
-      glow: 'shadow-purple-950/60 hover:shadow-purple-600/20',
-      badgeBg: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
-      iconBg: 'bg-purple-600 text-white shadow-purple-600/40',
-      buttonBg: 'bg-purple-600 hover:bg-purple-500 text-white shadow-purple-600/30',
-      gradient: 'from-purple-600 via-fuchsia-400 to-pink-500',
-    },
+
+    if (onSaveConfig) {
+      onSaveConfig(updatedConfig);
+    }
+
+    setEditFormData({ ...adsData[activeIndex] });
+    setSaveSuccessMsg(true);
+    setTimeout(() => {
+      setSaveSuccessMsg(false);
+      setIsEditingInline(false);
+    }, 600);
   };
 
   const activeThemeColor = isEditingInline && editFormData?.accentColor
     ? editFormData.accentColor
-    : currentSlide.accentColor || 'indigo';
+    : currentSlide.accentColor || (activeIndex === 0 ? 'indigo' : 'amber');
 
   const currentTheme = themeMap[activeThemeColor] || themeMap.indigo;
 
-  // Render appropriate icon
+  // Render icon for slide
   const renderSlideIcon = (item: FloatingBannerItem) => {
     if (item.iconType === 'custom' && item.customIconUrl) {
       return (
@@ -211,38 +318,38 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
           src={item.customIconUrl}
           alt="Icon"
           referrerPolicy="no-referrer"
-          className="w-6 h-6 rounded object-cover"
+          className="w-5 h-5 rounded object-cover"
         />
       );
     }
     if (item.iconType === 'trophy') {
-      return <Trophy className="w-6 h-6 text-white" />;
+      return <Trophy className="w-5 h-5 text-white" />;
     }
     if (item.iconType === 'sparkles') {
-      return <Sparkles className="w-6 h-6 text-white" />;
+      return <Sparkles className="w-5 h-5 text-white" />;
     }
     if (item.iconType === 'zap') {
-      return <Zap className="w-6 h-6 text-white" />;
+      return <Zap className="w-5 h-5 text-white" />;
     }
     if (item.iconType === 'flag') {
-      return <Flag className="w-6 h-6 text-white" />;
+      return <Flag className="w-5 h-5 text-white" />;
     }
-    return <DiscordIcon className="w-6 h-6 text-white" />;
+    return <DiscordIcon className="w-5 h-5 text-white" />;
   };
 
-  // If dismissed, show mini reopen pill
+  // If dismissed, show reopen pill in bottom-right corner
   if (!isVisible) {
     return (
       <button
         type="button"
         id="reopen-discord-banner-btn"
         onClick={handleReopen}
-        title="Open PRL League Advertisement"
+        title="Open PRL League & Announcements"
         className="fixed bottom-4 right-4 z-40 bg-slate-900/95 hover:bg-[#5865F2] text-slate-300 hover:text-white border border-slate-700 hover:border-transparent p-2.5 rounded-full shadow-xl transition-all duration-200 flex items-center gap-2 group cursor-pointer"
       >
         <DiscordIcon className="w-5 h-5 text-[#5865F2] group-hover:text-white transition-colors" />
         <span className="text-xs font-bold pr-1 hidden group-hover:inline-block transition-all">
-          Join PRL League
+          Announcements (1/{slides.length})
         </span>
       </button>
     );
@@ -250,7 +357,13 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
 
   const handleCardClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
-    if (target.closest('button') || target.closest('input') || target.closest('textarea') || target.closest('select') || target.closest('a')) {
+    if (
+      target.closest('button') ||
+      target.closest('input') ||
+      target.closest('textarea') ||
+      target.closest('select') ||
+      target.closest('a')
+    ) {
       return;
     }
     if (isEditingInline) return;
@@ -264,6 +377,8 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
     <div
       id="floating-discord-banner"
       onClick={handleCardClick}
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
       className={`fixed bottom-4 right-4 z-40 ${
         isEditingInline ? 'max-w-[420px] sm:max-w-[440px]' : 'max-w-[360px] sm:max-w-[390px]'
       } w-[calc(100vw-2rem)] bg-slate-900/95 backdrop-blur-md rounded-2xl border ${
@@ -276,20 +391,20 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
       <div className={`h-1.5 w-full bg-gradient-to-r ${currentTheme.gradient}`} />
 
       <div className="p-4 space-y-3">
-        {/* Top bar: Badge, Online count, Admin Edit toggle & Close button */}
+        {/* Top bar: Badge, Online count, Page Numbers (1/2), Controls & Close [X] */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 flex-wrap min-w-0">
             {isEditingInline ? (
               <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1">
                 <Edit3 className="w-3 h-3 text-amber-400" />
-                <span>Admin Editing</span>
+                <span>Editing Slide {activeIndex + 1}/{slides.length}</span>
               </span>
             ) : (
               <>
                 <span
                   className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border transition-all duration-300 ${currentTheme.badgeBg}`}
                 >
-                  {currentSlide.badgeText || 'ADVERTISEMENT'}
+                  {currentSlide.badgeText || (activeIndex === 0 ? 'ADVERTISEMENT' : 'ANNOUNCEMENT')}
                 </span>
                 {typeof currentSlide.onlineCount === 'number' && (
                   <span className="flex items-center gap-1.5 text-[11px] font-medium text-slate-400">
@@ -302,7 +417,36 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
           </div>
 
           <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-            {/* Direct Admin Edit Button */}
+            {/* Slider Controls: Prev (<), Slide Indicator (1/2), Next (>) */}
+            {!isEditingInline && (
+              <div className="flex items-center bg-slate-950/80 rounded-lg border border-slate-800 p-0.5 gap-0.5">
+                <button
+                  type="button"
+                  id="banner-prev-slide-btn"
+                  onClick={handlePrevSlide}
+                  title="Previous Slide"
+                  className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+
+                <span className="text-[10px] font-mono font-bold text-slate-300 px-1 select-none">
+                  {activeIndex + 1}/{slides.length}
+                </span>
+
+                <button
+                  type="button"
+                  id="banner-next-slide-btn"
+                  onClick={handleNextSlide}
+                  title="Next Slide"
+                  className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            {/* Admin Edit Button */}
             {isAdmin && (
               <button
                 type="button"
@@ -316,7 +460,7 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
                     setIsEditingInline(true);
                   }
                 }}
-                title={isEditingInline ? 'Cancel Edit' : 'Edit Ad (Admin)'}
+                title={isEditingInline ? 'Cancel Edit' : `Edit Slide ${activeIndex + 1} (Admin)`}
                 className={`flex items-center gap-1 text-[10px] font-extrabold px-2 py-1 rounded-lg border transition-all cursor-pointer ${
                   isEditingInline
                     ? 'bg-amber-500 text-slate-950 border-amber-400 font-black shadow-md'
@@ -325,17 +469,17 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
               >
                 <Edit3 className="w-3 h-3" />
                 <span className="hidden xs:inline sm:inline">
-                  {isEditingInline ? 'Exit' : 'Edit Ad'}
+                  {isEditingInline ? 'Exit' : `Edit ${activeIndex + 1}`}
                 </span>
               </button>
             )}
 
-            {/* Close / Dismiss Button */}
+            {/* Close [X] Button */}
             <button
               type="button"
               id="close-floating-banner-btn"
               onClick={handleDismiss}
-              title="Close Ad"
+              title="Close Ad Box"
               className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
@@ -344,7 +488,7 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
         </div>
 
         {/* ========================================================= */}
-        {/* INLINE ADMIN EDIT FORM */}
+        {/* INLINE ADMIN EDIT FORM                                    */}
         {/* ========================================================= */}
         {isEditingInline && editFormData ? (
           <form
@@ -355,42 +499,63 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
             <div className="flex items-center justify-between border-b border-slate-800 pb-1.5">
               <span className="font-extrabold text-amber-300 flex items-center gap-1.5">
                 <Edit3 className="w-3.5 h-3.5 text-amber-400" />
-                <span>Edit Advertisement</span>
+                <span>Editing Slide #{activeIndex + 1} of {slides.length}</span>
               </span>
-              <span className="text-[10px] text-slate-400">Updates live</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextIdx = (activeIndex + 1) % slides.length;
+                    setCurrentSlideIndex(nextIdx);
+                    setEditFormData({ ...slides[nextIdx] });
+                  }}
+                  className="text-[10px] text-indigo-300 hover:text-indigo-200 underline font-semibold cursor-pointer"
+                >
+                  Switch to Slide {activeIndex === 0 ? '2' : '1'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetToDefaultAds}
+                  title="Reset to adsData defined in FloatingBanner.tsx"
+                  className="text-[10px] text-slate-400 hover:text-amber-300 flex items-center gap-0.5 cursor-pointer"
+                >
+                  <RotateCcw className="w-2.5 h-2.5" />
+                  <span>Reset Default</span>
+                </button>
+              </div>
             </div>
 
-            {/* 1. Ad Title */}
+            {/* 1. Title */}
             <div>
               <label className="block text-[11px] font-bold text-slate-300 mb-1">
-                Ad Title:
+                Slide #{activeIndex + 1} Title:
               </label>
               <input
                 type="text"
                 required
                 value={editFormData.title}
                 onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
-                placeholder="Join PRL League"
+                placeholder={activeIndex === 0 ? 'Join PRL League' : 'Custom Announcement Title'}
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400"
               />
             </div>
 
-            {/* 2. Description Text */}
+            {/* 2. Description */}
             <div>
               <label className="block text-[11px] font-bold text-slate-300 mb-1">
-                Description Text:
+                Description:
               </label>
               <textarea
                 rows={2}
                 required
                 value={editFormData.description}
                 onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
-                placeholder="Access exclusive PRL League setups, race results, and connect with fellow league drivers."
+                placeholder="Enter advertisement or announcement text..."
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400"
               />
             </div>
 
-            {/* 3. Button Link / URL */}
+            {/* 3. Link Target URL */}
             <div>
               <label className="block text-[11px] font-bold text-slate-300 mb-1">
                 Button Target Link / URL:
@@ -405,17 +570,17 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
               />
             </div>
 
-            {/* 4. Badge / Tag Text & Button Label */}
+            {/* 4. Badge & Button Label */}
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-[11px] font-bold text-slate-300 mb-1">
-                  Badge / Tag Text:
+                  Badge Tag:
                 </label>
                 <input
                   type="text"
                   value={editFormData.badgeText || ''}
                   onChange={(e) => setEditFormData({ ...editFormData, badgeText: e.target.value })}
-                  placeholder="ADVERTISEMENT"
+                  placeholder={activeIndex === 0 ? 'ADVERTISEMENT' : 'ANNOUNCEMENT'}
                   className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400"
                 />
               </div>
@@ -431,6 +596,43 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
                   placeholder="Join PRL League"
                   className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400"
                 />
+              </div>
+            </div>
+
+            {/* 5. Icon & Color Theme */}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                  Icon:
+                </label>
+                <select
+                  value={editFormData.iconType}
+                  onChange={(e) => setEditFormData({ ...editFormData, iconType: e.target.value as any })}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400"
+                >
+                  <option value="discord">Discord</option>
+                  <option value="trophy">Trophy</option>
+                  <option value="sparkles">Sparkles</option>
+                  <option value="zap">Zap (Speed)</option>
+                  <option value="flag">Racing Flag</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-300 mb-1">
+                  Color Theme:
+                </label>
+                <select
+                  value={editFormData.accentColor || 'indigo'}
+                  onChange={(e) => setEditFormData({ ...editFormData, accentColor: e.target.value as any })}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400"
+                >
+                  <option value="indigo">Discord Blurple</option>
+                  <option value="amber">Amber Gold</option>
+                  <option value="emerald">Emerald Green</option>
+                  <option value="cyan">Cyan Telemetry</option>
+                  <option value="red">Racing Red</option>
+                  <option value="purple">Esports Purple</option>
+                </select>
               </div>
             </div>
 
@@ -452,12 +654,12 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
                 {saveSuccessMsg ? (
                   <>
                     <Check className="w-3.5 h-3.5" />
-                    <span>Saved Live!</span>
+                    <span>Saved Slide {activeIndex + 1}!</span>
                   </>
                 ) : (
                   <>
                     <Save className="w-3.5 h-3.5" />
-                    <span>Save Ad</span>
+                    <span>Save Slide {activeIndex + 1}</span>
                   </>
                 )}
               </button>
@@ -465,13 +667,13 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
           </form>
         ) : (
           /* ========================================================= */
-          /* STANDARD CLEAN AD CARD (Single Dedicated Advertisement)    */
+          /* STANDARD ACTIVE SLIDE DISPLAY                             */
           /* ========================================================= */
           <>
             {/* Content Section: Icon + Title + Description */}
             <div className="flex items-start gap-3">
               <div
-                className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-md ${currentTheme.iconBg}`}
+                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-md ${currentTheme.iconBg}`}
               >
                 {renderSlideIcon(currentSlide)}
               </div>
@@ -480,7 +682,7 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
                 <h4 className="text-sm font-black text-white tracking-tight flex items-center gap-1.5 truncate group-hover:text-indigo-300 transition-colors">
                   <span>{currentSlide.title}</span>
                 </h4>
-                <p className="text-xs text-slate-300 leading-relaxed mt-0.5">
+                <p className="text-xs text-slate-300 leading-relaxed mt-0.5 line-clamp-2">
                   {currentSlide.description}
                 </p>
               </div>
@@ -512,6 +714,26 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
                 <span>{currentSlide.buttonText}</span>
                 <ExternalLink className="w-3.5 h-3.5 opacity-80" />
               </a>
+            </div>
+
+            {/* Slide Indicator Dots (2 dots) */}
+            <div className="flex items-center justify-center gap-1.5 pt-0.5">
+              {slides.map((_, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentSlideIndex(idx);
+                  }}
+                  title={`Go to Slide ${idx + 1}`}
+                  className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                    idx === activeIndex
+                      ? 'w-6 bg-indigo-400 shadow-sm shadow-indigo-500/50'
+                      : 'w-1.5 bg-slate-700 hover:bg-slate-500'
+                  }`}
+                />
+              ))}
             </div>
           </>
         )}

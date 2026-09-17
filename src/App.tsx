@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { SimGame, CarSetup, UserAccount, SupportedF1GameId, VerificationStatus, FloatingBannerConfig } from './types';
 import { SIM_GAMES, INITIAL_SETUPS } from './data/mockData';
-import { DEFAULT_FLOATING_BANNER_CONFIG } from './data/bannerConfig';
+import { DEFAULT_FLOATING_BANNER_CONFIG, DEFAULT_FLOATING_BANNER_ITEMS } from './data/bannerConfig';
 import { SetupMarketplace } from './components/SetupMarketplace';
 import { AuthBarrier } from './components/AuthBarrier';
 import { AuthModal } from './components/AuthModal';
@@ -109,6 +109,12 @@ export default function App() {
             }
             return it;
           });
+
+          // If only 1 item existed in localStorage, append default second slot
+          if (updatedItems.length < 2) {
+            updatedItems.push(DEFAULT_FLOATING_BANNER_ITEMS[1]);
+          }
+
           return {
             ...parsed,
             items: updatedItems,

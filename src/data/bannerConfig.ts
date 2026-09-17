@@ -13,11 +13,23 @@ export const DEFAULT_FLOATING_BANNER_ITEMS: FloatingBannerItem[] = [
     iconType: 'discord',
     accentColor: 'indigo',
   },
+  {
+    id: 'custom-announcement-slot',
+    title: 'Custom Announcement Slot',
+    highlightText: 'Custom Slot',
+    description: 'Easily customize this slot with your partner links, sponsors, race leagues, or setup guides.',
+    buttonText: 'Configure Link',
+    buttonUrl: 'https://discord.gg/aFzAhfBy3',
+    badgeText: 'ANNOUNCEMENT',
+    onlineCount: 150,
+    iconType: 'sparkles',
+    accentColor: 'amber',
+  },
 ];
 
 export const DEFAULT_FLOATING_BANNER_CONFIG: FloatingBannerConfig = {
   enabled: true,
-  autoRotate: false,
+  autoRotate: true,
   intervalSeconds: 5,
   items: DEFAULT_FLOATING_BANNER_ITEMS,
   // Fallbacks for backwards compatibility
