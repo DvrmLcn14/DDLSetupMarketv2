@@ -38,9 +38,9 @@ export const adsData: FloatingBannerItem[] = [
     accentColor: 'indigo',
   },
   {
-    id: 'custom-announcement-slot',
-    badgeText: 'ANNOUNCEMENT',
-    title: 'Custom Announcement Slot',
+    id: 'custom-announcement-slot-1',
+    badgeText: 'ANNOUNCEMENT 1',
+    title: 'Custom Announcement 1',
     highlightText: 'Featured',
     description:
       'Easily customize this slot with your partner links, sponsors, race leagues, or setup guides.',
@@ -51,7 +51,20 @@ export const adsData: FloatingBannerItem[] = [
     accentColor: 'amber',
   },
   {
-    id: 'empty-template-slot',
+    id: 'custom-announcement-slot-2',
+    badgeText: 'ANNOUNCEMENT 2',
+    title: 'Custom Announcement 2',
+    highlightText: 'Hot Event',
+    description:
+      'Register for upcoming hotlap competitions, telemetry breakdown sessions, and driver coaching.',
+    buttonText: 'View Events',
+    buttonUrl: 'https://discord.gg/aFzAhfBy3',
+    onlineCount: 310,
+    iconType: 'trophy',
+    accentColor: 'emerald',
+  },
+  {
+    id: 'custom-template-slot-4',
     badgeText: 'SPONSOR / AD',
     title: 'Your Ad / Sponsor Here',
     highlightText: 'Available',
