@@ -206,6 +206,7 @@ export const SubmitSetupModal: React.FC<SubmitSetupModalProps> = ({
         rearWing: 16,
         diffOnThrottle: 55,
         diffOffThrottle: 50,
+        engineBraking: 60,
         frontCamber: -2.80,
         rearCamber: -1.10,
         frontToe: 0.05,
@@ -1125,8 +1126,8 @@ export const SubmitSetupModal: React.FC<SubmitSetupModalProps> = ({
 
                 {/* 2. Transmission / Differential */}
                 <div className="p-3 bg-slate-900/90 rounded-lg border border-slate-800 space-y-2">
-                  <div className="text-xs font-bold text-sky-400">2. Transmission / Differential (10% - 100%)</div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="text-xs font-bold text-sky-400">2. Transmission / Differential (10% - 100%) & Engine Braking</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <div className="flex justify-between text-[11px] text-slate-300 mb-1">
                         <span>Diff On-Throttle:</span>
@@ -1152,6 +1153,20 @@ export const SubmitSetupModal: React.FC<SubmitSetupModalProps> = ({
                         max="100"
                         value={specs.diffOffThrottle}
                         onChange={(e) => handleSpecChange('diffOffThrottle', Number(e.target.value))}
+                        className="w-full accent-sky-500"
+                      />
+                    </div>
+                    <div>
+                      <div className="flex justify-between text-[11px] text-slate-300 mb-1">
+                        <span>Engine Braking:</span>
+                        <span className="font-mono text-white font-bold">{specs.engineBraking ?? 60}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={specs.engineBraking ?? 60}
+                        onChange={(e) => handleSpecChange('engineBraking', Number(e.target.value))}
                         className="w-full accent-sky-500"
                       />
                     </div>

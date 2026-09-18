@@ -5,6 +5,7 @@ export interface F1SetupSpecs {
   // Transmission / Differential (10% - 100%)
   diffOnThrottle: number; // 10% - 100%
   diffOffThrottle: number; // 10% - 100%
+  engineBraking?: number; // 0% - 100% (Engine Braking Adjustment)
   // Suspension Geometry
   frontCamber: number; // -3.50° to -2.50°
   rearCamber: number; // -2.20° to -0.70°
