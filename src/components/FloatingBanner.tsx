@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { FloatingBannerConfig, FloatingBannerItem } from '../types';
 import { useLanguage } from '../i18n/LanguageContext';
+import { DEFAULT_FLOATING_BANNER_ITEMS, DEFAULT_FLOATING_BANNER_CONFIG } from '../data/bannerConfig';
 
 /**
  * =========================================================================
@@ -26,73 +27,7 @@ import { useLanguage } from '../i18n/LanguageContext';
  * automatically rotate through all items every 3 seconds.
  * =========================================================================
  */
-export const adsData: FloatingBannerItem[] = [
-  {
-    id: 'prl-league-ad',
-    badgeText: 'ADVERTISEMENT',
-    title: 'Join PRL League',
-    highlightText: 'Official League',
-    description:
-      'Access exclusive PRL League setups, race results, and connect with fellow league drivers.',
-    buttonText: 'Join PRL League',
-    buttonUrl: 'https://discord.gg/aFzAhfBy3',
-    onlineCount: 428,
-    iconType: 'discord',
-    accentColor: 'indigo',
-  },
-  {
-    id: 'custom-announcement-slot-1',
-    badgeText: 'ANNOUNCEMENT 1',
-    title: 'Custom Announcement 1',
-    highlightText: 'Featured',
-    description:
-      'Easily customize this slot with your partner links, sponsors, race leagues, or setup guides.',
-    buttonText: 'Configure Link',
-    buttonUrl: 'https://discord.gg/aFzAhfBy3',
-    onlineCount: 150,
-    iconType: 'sparkles',
-    accentColor: 'amber',
-  },
-  {
-    id: 'custom-announcement-slot-2',
-    badgeText: 'ANNOUNCEMENT 2',
-    title: 'Custom Announcement 2',
-    highlightText: 'Hot Event',
-    description:
-      'Register for upcoming hotlap competitions, telemetry breakdown sessions, and driver coaching.',
-    buttonText: 'View Events',
-    buttonUrl: 'https://discord.gg/aFzAhfBy3',
-    onlineCount: 310,
-    iconType: 'trophy',
-    accentColor: 'emerald',
-  },
-  {
-    id: 'custom-template-slot-4',
-    badgeText: 'SPONSOR / AD',
-    title: 'Your Ad / Sponsor Here',
-    highlightText: 'Available',
-    description:
-      'Space available for community partners, esports teams, or custom setup announcements.',
-    buttonText: 'Add Your Link',
-    buttonUrl: 'https://discord.gg/aFzAhfBy3',
-    onlineCount: 200,
-    iconType: 'zap',
-    accentColor: 'cyan',
-  },
-  {
-    id: 'custom-announcement-slot-5',
-    badgeText: 'COACHING / ESPORTS',
-    title: 'Apex Esports Academy',
-    highlightText: 'Driver Coaching',
-    description:
-      'Get telemetry analysis, master braking points, and compete in weekly championship lobbies.',
-    buttonText: 'Join Academy Hub',
-    buttonUrl: 'https://discord.gg/aFzAhfBy3',
-    onlineCount: 560,
-    iconType: 'flag',
-    accentColor: 'purple',
-  },
-];
+export const adsData: FloatingBannerItem[] = DEFAULT_FLOATING_BANNER_ITEMS;
 
 // Configuration constants: 3-second automatic rotation
 export const BANNER_ROTATION_INTERVAL_SECONDS = 3;

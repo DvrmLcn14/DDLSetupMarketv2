@@ -1,0 +1,67 @@
+{
+  "enabled": true,
+  "autoRotate": true,
+  "intervalSeconds": 3,
+  "items": [
+    {
+      "id": "prl-league-ad",
+      "title": "Join PRL League",
+      "highlightText": "Official League",
+      "description": "Access exclusive PRL League setups, live race telemetry, championship standings, and connect with fellow F1 drivers.",
+      "buttonText": "Join PRL League",
+      "buttonUrl": "https://discord.gg/aFzAhfBy3",
+      "badgeText": "OFFICIAL LEAGUE",
+      "onlineCount": 428,
+      "iconType": "discord",
+      "accentColor": "indigo"
+    },
+    {
+      "id": "ddl-community-discord",
+      "title": "DDL Setup Discord Community",
+      "highlightText": "Hot Community",
+      "description": "Get daily esports setups for F1 24, F1 25 & F1 26, discuss racing lines, and get 1-on-1 tuning help from creators.",
+      "buttonText": "Join Discord Server",
+      "buttonUrl": "https://discord.gg/aFzAhfBy3",
+      "badgeText": "HOT COMMUNITY",
+      "onlineCount": 1280,
+      "iconType": "discord",
+      "accentColor": "amber"
+    },
+    {
+      "id": "weekly-hotlap-trials",
+      "title": "Weekly Hotlap Time Trials",
+      "highlightText": "Prize Pool",
+      "description": "Compete on Spa & Silverstone leaderboards with verified telemetry screenshots. Win exclusive Verified Creator badges.",
+      "buttonText": "View Leaderboards",
+      "buttonUrl": "https://discord.gg/aFzAhfBy3",
+      "badgeText": "WEEKLY EVENT",
+      "onlineCount": 340,
+      "iconType": "trophy",
+      "accentColor": "emerald"
+    },
+    {
+      "id": "telemetry-coaching-hub",
+      "title": "Telemetry & Coaching Hub",
+      "highlightText": "Pro Guides",
+      "description": "Master corner exit throttle control, differential tuning, and optimal wing aerodynamic setups with esports coaches.",
+      "buttonText": "Access Setup Guides",
+      "buttonUrl": "https://discord.gg/aFzAhfBy3",
+      "badgeText": "COACHING HUB",
+      "onlineCount": 215,
+      "iconType": "zap",
+      "accentColor": "cyan"
+    },
+    {
+      "id": "apex-esports-championship",
+      "title": "Apex Esports Championship",
+      "highlightText": "Championship",
+      "description": "Register for Tier 1 & Tier 2 Sunday league races with FIA-grade stewarding and broadcasted live streams.",
+      "buttonText": "Register for League",
+      "buttonUrl": "https://discord.gg/aFzAhfBy3",
+      "badgeText": "CHAMPIONSHIP",
+      "onlineCount": 560,
+      "iconType": "flag",
+      "accentColor": "purple"
+    }
+  ]
+}
