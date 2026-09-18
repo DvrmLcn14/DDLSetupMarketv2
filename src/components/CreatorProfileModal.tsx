@@ -24,7 +24,7 @@ import {
 import { CarSetup, UserAccount } from '../types';
 import { getCreatorProfile } from '../data/mockCreators';
 import { TRACKS, SIM_GAMES } from '../data/mockData';
-import { getTrackFlagEmoji } from '../utils/trackFlags';
+import { getTrackFlagEmoji, TrackFlagIcon } from '../utils/trackFlags';
 
 interface CreatorProfileModalProps {
   creatorUsername: string;
@@ -105,10 +105,18 @@ export const CreatorProfileModal: React.FC<CreatorProfileModalProps> = ({
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const getTrackName = (setup: CarSetup) => {
+  const renderTrackName = (setup: CarSetup) => {
     const raw = setup.customTrackName || TRACKS[setup.trackId]?.name || setup.trackId.toUpperCase();
-    const flag = getTrackFlagEmoji(setup.trackId, TRACKS[setup.trackId]?.country || setup.customTrackName);
-    return `${flag} ${raw}`;
+    return (
+      <span className="flex items-center gap-1.5 truncate">
+        <TrackFlagIcon
+          trackId={setup.trackId}
+          countryOrTrackName={TRACKS[setup.trackId]?.country || setup.customTrackName}
+          size="sm"
+        />
+        <span className="truncate">{raw}</span>
+      </span>
+    );
   };
 
   return (
@@ -384,7 +392,7 @@ export const CreatorProfileModal: React.FC<CreatorProfileModalProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
               {creatorSetups.map((setup) => {
                 const gameObj = SIM_GAMES.find((g) => g.id === setup.gameId);
-                const trackName = getTrackName(setup);
+                const trackName = renderTrackName(setup);
                 const isFavorited = favoriteIds.includes(setup.id);
                 const isCopied = copiedId === setup.id;
 

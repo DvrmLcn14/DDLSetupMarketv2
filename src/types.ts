@@ -89,6 +89,7 @@ export interface SimGame {
   activeTracks: string[];
   cars: string[];
   backdropUrl: string;
+  carImageUrl?: string;
 }
 
 export interface Track {

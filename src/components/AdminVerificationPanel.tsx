@@ -25,7 +25,7 @@ import {
 import { CarSetup, Track, VerificationStatus, FloatingBannerConfig, FloatingBannerItem } from '../types';
 import { TRACKS } from '../data/mockData';
 import { DEFAULT_FLOATING_BANNER_CONFIG, DEFAULT_FLOATING_BANNER_ITEMS } from '../data/bannerConfig';
-import { getTrackFlagEmoji } from '../utils/trackFlags';
+import { getTrackFlagEmoji, TrackFlagIcon } from '../utils/trackFlags';
 import { SubmitSetupModal } from './SubmitSetupModal';
 import { DiscordIcon } from './FloatingBanner';
 
@@ -404,9 +404,7 @@ export const AdminVerificationPanel: React.FC<AdminVerificationPanelProps> = ({
                   >
                     <div className="flex items-start justify-between gap-2 mb-1.5">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-sm">
-                          {getTrackFlagEmoji(s.trackId, trackObj?.country)}
-                        </span>
+                        <TrackFlagIcon trackId={s.trackId} countryOrTrackName={trackObj?.country} size="sm" />
                         <span className="font-bold text-white text-xs line-clamp-1">
                           {s.title}
                         </span>
@@ -508,12 +506,11 @@ export const AdminVerificationPanel: React.FC<AdminVerificationPanelProps> = ({
                 <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-xl">
-                        {getTrackFlagEmoji(
-                          activeSetup.trackId,
-                          TRACKS[activeSetup.trackId]?.country
-                        )}
-                      </span>
+                      <TrackFlagIcon
+                        trackId={activeSetup.trackId}
+                        countryOrTrackName={TRACKS[activeSetup.trackId]?.country}
+                        size="lg"
+                      />
                       <div>
                         <h3 className="font-black text-white text-base">
                           {activeSetup.title}

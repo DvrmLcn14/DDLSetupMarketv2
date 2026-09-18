@@ -17,12 +17,12 @@ interface DesktopHeaderProps {
   pendingAdminCount?: number;
 }
 
-const LANGUAGES: { code: Language; flag: string; label: string }[] = [
-  { code: 'en', flag: '🇬🇧', label: 'English' },
-  { code: 'tr', flag: '🇹🇷', label: 'Türkçe' },
-  { code: 'it', flag: '🇮🇹', label: 'Italiano' },
-  { code: 'de', flag: '🇩🇪', label: 'Deutsch' },
-  { code: 'es', flag: '🇪🇸', label: 'Español' },
+const LANGUAGES: { code: Language; flagImg: string; label: string }[] = [
+  { code: 'en', flagImg: '/flags/en.png', label: 'English' },
+  { code: 'tr', flagImg: '/flags/tr.png', label: 'Türkçe' },
+  { code: 'it', flagImg: '/flags/it.png', label: 'Italiano' },
+  { code: 'de', flagImg: '/flags/de.png', label: 'Deutsch' },
+  { code: 'es', flagImg: '/flags/es.png', label: 'Español' },
 ];
 
 export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
@@ -68,13 +68,18 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
               type="button"
               id="game-tab-f1-24"
               onClick={() => onSelectGame('f1_24')}
-              className={`px-3.5 sm:px-4 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${
+              className={`px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer ${
                 !isFavoritesActive && activeGame.id === 'f1_24'
                   ? 'bg-red-600 text-white shadow-md shadow-red-600/30'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
               }`}
             >
-              <span>🏎️</span>
+              <img
+                src="/cars/redbull.jpg"
+                alt="Red Bull F1 24"
+                className="w-7 h-4 object-cover rounded shadow-sm border border-slate-700/60 shrink-0 brightness-105"
+                referrerPolicy="no-referrer"
+              />
               <span>F1® 24 {t.setupsTab}</span>
             </button>
 
@@ -83,13 +88,18 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
               type="button"
               id="game-tab-f1-25"
               onClick={() => onSelectGame('f1_25')}
-              className={`px-3.5 sm:px-4 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${
+              className={`px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer ${
                 !isFavoritesActive && activeGame.id === 'f1_25'
                   ? 'bg-red-600 text-white shadow-md shadow-red-600/30'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
               }`}
             >
-              <span>⚡</span>
+              <img
+                src="/cars/mercedes.jpg"
+                alt="Mercedes F1 25"
+                className="w-7 h-4 object-cover rounded shadow-sm border border-slate-700/60 shrink-0 brightness-105"
+                referrerPolicy="no-referrer"
+              />
               <span>F1® 25 {t.setupsTab}</span>
             </button>
 
@@ -98,13 +108,18 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
               type="button"
               id="game-tab-f1-26"
               onClick={() => onSelectGame('f1_26')}
-              className={`px-3.5 sm:px-4 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${
+              className={`px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-2 transition-all cursor-pointer ${
                 !isFavoritesActive && activeGame.id === 'f1_26'
                   ? 'bg-red-600 text-white shadow-md shadow-red-600/30'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
               }`}
             >
-              <span>🚀</span>
+              <img
+                src="/cars/ferrari.jpg"
+                alt="Ferrari F1 26"
+                className="w-7 h-4 object-cover rounded shadow-sm border border-slate-700/60 shrink-0 brightness-105"
+                referrerPolicy="no-referrer"
+              />
               <span>F1® 26 {t.setupsTab}</span>
             </button>
 
@@ -140,25 +155,33 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
 
         {/* Right Actions: Multi-language Switcher Toggle, Submit F1 Setup, Admin Review & Account */}
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-          {/* Expanded 5-Language Switcher Toggle */}
+          {/* Expanded 5-Language Switcher Toggle with Flag PNG Images */}
           <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 shadow-inner gap-0.5">
-            {LANGUAGES.map((lang) => (
-              <button
-                key={lang.code}
-                type="button"
-                id={`lang-toggle-${lang.code}`}
-                onClick={() => setLanguage(lang.code)}
-                title={lang.label}
-                className={`px-2 py-1 rounded-lg text-[11px] font-extrabold flex items-center gap-1 transition-all cursor-pointer ${
-                  language === lang.code
-                    ? 'bg-red-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                }`}
-              >
-                <span>{lang.flag}</span>
-                <span>{lang.code.toUpperCase()}</span>
-              </button>
-            ))}
+            {LANGUAGES.map((lang) => {
+              const isActive = language === lang.code;
+              return (
+                <button
+                  key={lang.code}
+                  type="button"
+                  id={`lang-toggle-${lang.code}`}
+                  onClick={() => setLanguage(lang.code)}
+                  title={lang.label}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-md shadow-red-900/30 border border-red-500/40'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                  }`}
+                >
+                  <img
+                    src={lang.flagImg}
+                    alt={lang.label}
+                    className="w-4 h-2.5 object-cover rounded-xs shadow-xs border border-slate-700/60 flex-shrink-0"
+                    referrerPolicy="no-referrer"
+                  />
+                  <span className="text-[11px] font-bold tracking-tight">{lang.label}</span>
+                </button>
+              );
+            })}
           </div>
 
           {/* Admin Verification Review Button */}

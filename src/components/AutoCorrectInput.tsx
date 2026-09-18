@@ -9,6 +9,7 @@ import {
   OfficialCarEntry,
   OfficialTrackEntry,
 } from '../utils/motorsportNomenclature';
+import { TrackFlagIcon } from '../utils/trackFlags';
 
 interface AutoCorrectInputProps {
   id?: string;
@@ -297,6 +298,7 @@ export const AutoCorrectInput: React.FC<AutoCorrectInputProps> = ({
                   >
                     <div>
                       <div className="font-bold flex items-center gap-1.5">
+                        <TrackFlagIcon trackId={track.id} countryOrTrackName={track.country} size="sm" />
                         <span>{track.officialName}</span>
                       </div>
                       <div className="text-[10px] text-slate-400 font-normal mt-0.5">

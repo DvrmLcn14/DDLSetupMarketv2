@@ -77,6 +77,19 @@ export const adsData: FloatingBannerItem[] = [
     iconType: 'zap',
     accentColor: 'cyan',
   },
+  {
+    id: 'custom-announcement-slot-5',
+    badgeText: 'COACHING / ESPORTS',
+    title: 'Apex Esports Academy',
+    highlightText: 'Driver Coaching',
+    description:
+      'Get telemetry analysis, master braking points, and compete in weekly championship lobbies.',
+    buttonText: 'Join Academy Hub',
+    buttonUrl: 'https://discord.gg/aFzAhfBy3',
+    onlineCount: 560,
+    iconType: 'flag',
+    accentColor: 'purple',
+  },
 ];
 
 // Configuration constants: 3-second automatic rotation

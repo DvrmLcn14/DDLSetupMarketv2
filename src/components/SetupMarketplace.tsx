@@ -60,7 +60,7 @@ import { SubmitSetupModal } from './SubmitSetupModal';
 import { CreatorProfileModal } from './CreatorProfileModal';
 import { downloadSetupAsImage } from '../utils/setupImageExport';
 import { normalizeSimString } from '../utils/motorsportNomenclature';
-import { getTrackFlagEmoji } from '../utils/trackFlags';
+import { getTrackFlagEmoji, getTrackFlagImg, TrackFlagIcon } from '../utils/trackFlags';
 import { useLanguage, translateLocation } from '../i18n/LanguageContext';
 
 interface SetupMarketplaceProps {
@@ -720,11 +720,19 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
     setSetupToDelete(null);
   };
 
-  // Helper for displaying human track names with country flag emoji
-  const getDisplayTrackName = (setup: CarSetup) => {
+  // Helper for rendering human track names with country flag PNG image derived from 2025 F1 Calendar
+  const renderDisplayTrackName = (setup: CarSetup, size: 'sm' | 'md' = 'sm') => {
     const rawName = TRACKS[setup.trackId]?.name || setup.customTrackName || setup.trackId.toUpperCase();
-    const flag = getTrackFlagEmoji(setup.trackId, TRACKS[setup.trackId]?.country || setup.customTrackName);
-    return `${flag} ${rawName}`;
+    return (
+      <span className="flex items-center gap-1.5 truncate">
+        <TrackFlagIcon
+          trackId={setup.trackId}
+          countryOrTrackName={TRACKS[setup.trackId]?.country || setup.customTrackName}
+          size={size}
+        />
+        <span className="truncate">{rawName}</span>
+      </span>
+    );
   };
 
   return (
@@ -824,7 +832,16 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
                       : 'bg-slate-950/80 text-slate-400 hover:text-slate-200 border-slate-800 hover:border-slate-700'
                   }`}
                 >
-                  <span className="text-sm">{game.icon}</span>
+                  {game.carImageUrl ? (
+                    <img
+                      src={game.carImageUrl}
+                      alt={game.name}
+                      className="w-7 h-4 object-cover rounded shadow-sm border border-slate-700/60 shrink-0 brightness-105"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <span className="text-sm">{game.icon}</span>
+                  )}
                   <span>{game.name}</span>
                   <span className={`text-[10px] px-1.5 py-0.2 rounded font-normal ${
                     isSelected ? 'bg-red-800/60 text-white' : 'bg-slate-800 text-slate-400'
@@ -838,8 +855,14 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
 
           <div className="text-xs text-slate-400 flex items-center gap-1.5">
             <span>{language === 'tr' ? 'Seçili Pist:' : 'Selected Circuit:'}</span>
-            <strong className="text-white font-bold flex items-center gap-1">
-              <span>{getTrackFlagEmoji(selectedTrackFilter, TRACKS[selectedTrackFilter]?.country)}</span>
+            <strong className="text-white font-bold flex items-center gap-1.5">
+              {selectedTrackFilter !== 'all' && (
+                <TrackFlagIcon
+                  trackId={selectedTrackFilter}
+                  countryOrTrackName={TRACKS[selectedTrackFilter]?.country}
+                  size="sm"
+                />
+              )}
               <span>{TRACKS[selectedTrackFilter]?.name?.split('(')[0] || (selectedTrackFilter === 'all' ? (language === 'tr' ? 'Tüm F1 Pistleri' : 'All F1 Circuits') : selectedTrackFilter)}</span>
             </strong>
           </div>
@@ -871,7 +894,6 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
           <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-thin">
             {availableTracks.map((track) => {
               const isCurrent = selectedTrackFilter.toLowerCase() === track.id.toLowerCase();
-              const flag = getTrackFlagEmoji(track.id, track.country || TRACKS[track.id]?.country);
               const trackSetupsCount = setups.filter(
                 (s) =>
                   s.trackId.toLowerCase() === track.id.toLowerCase() &&
@@ -892,7 +914,11 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
                       : 'bg-slate-950/80 text-slate-300 hover:text-white border-slate-800 hover:border-slate-700'
                   }`}
                 >
-                  <span className="text-sm">{flag}</span>
+                  <TrackFlagIcon
+                    trackId={track.id}
+                    countryOrTrackName={track.country || TRACKS[track.id]?.country}
+                    size="sm"
+                  />
                   <span>{track.name.split('(')[0].trim()}</span>
                   {trackSetupsCount > 0 && (
                     <span
@@ -912,9 +938,12 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
           {selectedTrackFilter !== 'all' && TRACKS[selectedTrackFilter] && (
             <div className="mt-3 p-3.5 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-l-4 border-l-red-600 border border-slate-800 rounded-xl relative overflow-hidden shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-3 animate-fadeIn">
               <div className="flex items-center gap-3">
-                <span className="text-3xl sm:text-4xl drop-shadow-md">
-                  {getTrackFlagEmoji(selectedTrackFilter, TRACKS[selectedTrackFilter].country)}
-                </span>
+                <TrackFlagIcon
+                  trackId={selectedTrackFilter}
+                  countryOrTrackName={TRACKS[selectedTrackFilter].country}
+                  size="xl"
+                  className="shadow-md shadow-black/60 border border-slate-600/60"
+                />
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-[9px] font-black uppercase tracking-widest text-red-400 bg-red-500/15 px-2 py-0.5 rounded border border-red-500/30">
@@ -1229,7 +1258,7 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredSetups.map((setup) => {
               const gameObj = SIM_GAMES.find((g) => g.id === setup.gameId);
-              const trackDisplayName = getDisplayTrackName(setup);
+              const trackDisplayName = renderDisplayTrackName(setup);
               const isCopied = copiedId === setup.id;
               const hasVisualScreenshots = Boolean(setup.setupScreenshots && setup.setupScreenshots.length > 0);
               const isFavorited = favoritesList.includes(setup.id);
@@ -1570,7 +1599,7 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
                     {SIM_GAMES.find((g) => g.id === inspectingSetup.gameId)?.name || inspectingSetup.gameId.toUpperCase()}
                   </span>
                   <span className="text-xs font-bold text-slate-300">
-                    {getDisplayTrackName(inspectingSetup)}
+                    {renderDisplayTrackName(inspectingSetup, 'sm')}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
@@ -2222,7 +2251,7 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
             <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800 text-xs space-y-1">
               <div className="font-bold text-slate-100 line-clamp-1">{ratingModalSetup.title}</div>
               <div className="text-slate-400 flex items-center gap-2">
-                <span className="font-semibold text-slate-300">{getDisplayTrackName(ratingModalSetup)}</span>
+                <span className="font-semibold text-slate-300">{renderDisplayTrackName(ratingModalSetup, 'sm')}</span>
                 <span>•</span>
                 <span className="font-mono text-emerald-400 font-bold">{ratingModalSetup.bestLapTime}</span>
               </div>
@@ -2316,7 +2345,7 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
             <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800 text-xs space-y-1">
               <div className="font-bold text-slate-100 line-clamp-1">{setupToDelete.title}</div>
               <div className="text-slate-400 flex items-center gap-2">
-                <span className="font-semibold text-slate-300">{getDisplayTrackName(setupToDelete)}</span>
+                <span className="font-semibold text-slate-300">{renderDisplayTrackName(setupToDelete, 'sm')}</span>
                 <span>•</span>
                 <span className="font-mono text-emerald-400 font-bold">{setupToDelete.bestLapTime}</span>
               </div>

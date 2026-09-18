@@ -31,7 +31,7 @@ import { generateSampleProofImage, SAMPLE_PROOFS } from '../data/proofScreenshot
 import { registerOrUpdateCreatorProfile, getCreatorProfile } from '../data/mockCreators';
 import { AutoCorrectInput } from './AutoCorrectInput';
 import { autoCorrectTrackName, autoCorrectCarName, CorrectionResult } from '../utils/motorsportNomenclature';
-import { getTrackFlagEmoji } from '../utils/trackFlags';
+import { getTrackFlagEmoji, TrackFlagIcon } from '../utils/trackFlags';
 
 // Synthetic F1 In-Game Setup Page SVG Generator
 function generateF1SetupPageSvg(
@@ -670,7 +670,16 @@ export const SubmitSetupModal: React.FC<SubmitSetupModalProps> = ({
                       }`}
                     >
                       <div className="flex items-center gap-2">
-                        <span className="text-base">{game.icon}</span>
+                        {game.carImageUrl ? (
+                          <img
+                            src={game.carImageUrl}
+                            alt={game.name}
+                            className="w-7 h-4 object-cover rounded shadow-sm border border-slate-700/60 shrink-0 brightness-105"
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                          <span className="text-base">{game.icon}</span>
+                        )}
                         <span className="text-xs font-extrabold">{game.name}</span>
                       </div>
                       {isSelected && <span className="text-[10px] text-red-300 font-bold">Selected</span>}
@@ -718,7 +727,7 @@ export const SubmitSetupModal: React.FC<SubmitSetupModalProps> = ({
                           : 'bg-slate-900 text-slate-300 hover:text-white border-slate-800 hover:border-slate-700'
                       }`}
                     >
-                      <span className="text-xs">{getTrackFlagEmoji(t.id, t.country)}</span>
+                      <TrackFlagIcon trackId={t.id} countryOrTrackName={t.country} size="sm" />
                       <span>{t.name.split('(')[0].trim()}</span>
                     </button>
                   ))}

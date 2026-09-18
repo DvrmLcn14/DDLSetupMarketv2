@@ -280,8 +280,9 @@ export const SIM_GAMES: SimGame[] = [
     genre: 'Formula Racing Sim',
     description: 'Official EA SPORTS FIA Formula One 2024 championship simulation featuring dynamic handling and suspension physics.',
     activeTracks: F1_CALENDAR_TRACK_IDS,
-    cars: ['Scuderia Ferrari SF-24', 'Oracle Red Bull RB20', 'McLaren MCL38', 'Mercedes-AMG F1 W15', 'Aston Martin AMR24'],
+    cars: ['Oracle Red Bull RB20', 'Scuderia Ferrari SF-24', 'McLaren MCL38', 'Mercedes-AMG F1 W15', 'Aston Martin AMR24'],
     backdropUrl: 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1600&q=80',
+    carImageUrl: '/cars/redbull.jpg',
   },
   {
     id: 'f1_25',
@@ -290,8 +291,9 @@ export const SIM_GAMES: SimGame[] = [
     genre: 'Formula Racing Sim',
     description: 'Premier open-wheel championship simulation featuring 2025 ground-effect aero regulations.',
     activeTracks: F1_CALENDAR_TRACK_IDS,
-    cars: ['Scuderia Ferrari SF-25', 'Oracle Red Bull RB21', 'McLaren MCL39', 'Mercedes-AMG F1 W16', 'Aston Martin AMR25'],
+    cars: ['Mercedes-AMG F1 W16', 'Scuderia Ferrari SF-25', 'Oracle Red Bull RB21', 'McLaren MCL39', 'Aston Martin AMR25'],
     backdropUrl: 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1600&q=80',
+    carImageUrl: '/cars/mercedes.jpg',
   },
   {
     id: 'f1_26',
@@ -302,6 +304,7 @@ export const SIM_GAMES: SimGame[] = [
     activeTracks: F1_CALENDAR_TRACK_IDS,
     cars: ['Scuderia Ferrari SF-26', 'Red Bull RB22 Powertrains', 'McLaren MCL40', 'Audi Revolut F1 Team', 'Mercedes-AMG W17'],
     backdropUrl: 'https://images.unsplash.com/photo-1574781330855-d0db8cc6a79c?auto=format&fit=crop&w=1600&q=80',
+    carImageUrl: '/cars/ferrari.jpg',
   },
 ];
 
