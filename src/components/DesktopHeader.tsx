@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, LogOut, Bookmark, ShieldCheck } from 'lucide-react';
+import { Plus, LogOut, Bookmark, ShieldCheck, Radio } from 'lucide-react';
 import { SupportedF1GameId, SimGame, UserAccount } from '../types';
 import { useLanguage, Language } from '../i18n/LanguageContext';
 
@@ -206,6 +206,26 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
               )}
             </button>
           )}
+
+          {/* F1 Setup Engineer AI Assistant Trigger */}
+          <button
+            type="button"
+            id="header-setup-engineer-btn"
+            onClick={() => {
+              const trigger = document.getElementById('f1-engineer-chat-trigger');
+              if (trigger) trigger.click();
+            }}
+            className="px-3 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-800 hover:border-red-500/60 font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+            title={language === 'tr' ? 'F1 Yarış Mühendisi / Telemetri Setup Asistanı' : 'F1 Race Engineer & Telemetry Assistant'}
+          >
+            <Radio className="w-3.5 h-3.5 text-red-400 animate-pulse" />
+            <span className="hidden md:inline">
+              {language === 'tr' ? 'Setup Mühendisi' : 'Setup Engineer'}
+            </span>
+            <span className="md:hidden">
+              {language === 'tr' ? 'Mühendis' : 'Engineer'}
+            </span>
+          </button>
 
           {/* Submit F1 Setup Button */}
           <button

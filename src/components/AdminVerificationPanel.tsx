@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   ShieldCheck,
   CheckCircle2,
@@ -21,6 +21,10 @@ import {
   Filter,
   Edit3,
   Plus,
+  Image as ImageIcon,
+  Upload,
+  Globe,
+  Link2,
 } from 'lucide-react';
 import { CarSetup, Track, VerificationStatus, FloatingBannerConfig, FloatingBannerItem } from '../types';
 import { TRACKS } from '../data/mockData';
@@ -1135,7 +1139,7 @@ export const AdminVerificationPanel: React.FC<AdminVerificationPanelProps> = ({
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div>
                             <label className="block text-xs font-semibold text-slate-300 mb-1">
-                              Icon Style:
+                              Icon Style / Visual Graphic:
                             </label>
                             <select
                               value={currentSlide.iconType}
@@ -1143,6 +1147,7 @@ export const AdminVerificationPanel: React.FC<AdminVerificationPanelProps> = ({
                               className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#5865F2]"
                             >
                               <option value="discord">Discord Icon</option>
+                              <option value="custom">Custom Image / Logo</option>
                               <option value="trophy">Trophy (Esports / Lap Times)</option>
                               <option value="sparkles">Sparkles (Hot / Contest)</option>
                               <option value="zap">Zap (Telemetry / Guides)</option>
@@ -1167,30 +1172,105 @@ export const AdminVerificationPanel: React.FC<AdminVerificationPanelProps> = ({
                             </select>
                           </div>
                         </div>
+
+                        {/* Custom Image Upload & URL input */}
+                        <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                              <ImageIcon className="w-3.5 h-3.5 text-indigo-400" />
+                              <span>Custom Slot Image / Sponsor Logo</span>
+                            </span>
+                            <span className="text-[10px] text-slate-400">URL or Device Upload</span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={currentSlide.customIconUrl || ''}
+                              onChange={(e) => {
+                                updateSlideField('customIconUrl', e.target.value);
+                                if (e.target.value) updateSlideField('iconType', 'custom');
+                              }}
+                              placeholder="https://... image link or upload below"
+                              className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono text-[11px]"
+                            />
+                            <label className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg border border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer shrink-0">
+                              <Upload className="w-3.5 h-3.5" />
+                              <span>Upload</span>
+                              <input
+                                type="file"
+                                accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    const reader = new FileReader();
+                                    reader.onload = (ev) => {
+                                      const dataUrl = ev.target?.result as string;
+                                      if (dataUrl) {
+                                        updateSlideField('customIconUrl', dataUrl);
+                                        updateSlideField('iconType', 'custom');
+                                      }
+                                    };
+                                    reader.readAsDataURL(file);
+                                  }
+                                }}
+                              />
+                            </label>
+                          </div>
+
+                          {currentSlide.customIconUrl && (
+                            <div className="flex items-center gap-2 pt-1">
+                              <img
+                                src={currentSlide.customIconUrl}
+                                alt="Custom"
+                                referrerPolicy="no-referrer"
+                                className="w-7 h-7 rounded object-cover border border-indigo-500/40"
+                              />
+                              <span className="text-[11px] text-emerald-400 font-medium">Image active</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  updateSlideField('customIconUrl', '');
+                                  updateSlideField('iconType', 'discord');
+                                }}
+                                className="text-[11px] text-rose-400 hover:text-rose-300 ml-auto cursor-pointer"
+                              >
+                                Remove Image
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
                 })()}
 
                 {/* Save Button */}
-                <div className="pt-3 border-t border-slate-800 flex items-center justify-between gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setBannerFormData({ ...DEFAULT_FLOATING_BANNER_CONFIG });
-                      setActiveSlideTab(0);
-                    }}
-                    className="text-xs text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
-                  >
-                    Reset All Defaults
-                  </button>
+                <div className="pt-3 border-t border-slate-800 flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBannerFormData({ ...DEFAULT_FLOATING_BANNER_CONFIG });
+                        setActiveSlideTab(0);
+                      }}
+                      className="text-xs text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+                    >
+                      Reset All Defaults
+                    </button>
+                    <span className="text-[10px] text-emerald-400 font-medium flex items-center gap-1">
+                      <Globe className="w-3 h-3" />
+                      <span>Saves globally for all users</span>
+                    </span>
+                  </div>
 
                   <button
                     type="submit"
                     id="save-floating-banner-admin-btn"
                     className="px-6 py-2.5 rounded-xl bg-[#5865F2] hover:bg-[#4752C4] text-white font-extrabold text-xs shadow-lg shadow-[#5865F2]/30 flex items-center gap-2 transition-all cursor-pointer transform active:scale-95"
                   >
-                    <span>{bannerSaveSuccess ? '✓ Slideshow Settings Saved!' : 'Save & Deploy Slideshow'}</span>
+                    <span>{bannerSaveSuccess ? '✓ Saved Globally to Database!' : 'Save & Publish Globally'}</span>
                   </button>
                 </div>
               </form>
@@ -1244,11 +1324,20 @@ export const AdminVerificationPanel: React.FC<AdminVerificationPanelProps> = ({
                           </div>
 
                           <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-md bg-[#5865F2] text-white">
-                              {previewSlide.iconType === 'trophy' ? (
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-md bg-[#5865F2] text-white overflow-hidden">
+                              {previewSlide.iconType === 'custom' && previewSlide.customIconUrl ? (
+                                <img
+                                  src={previewSlide.customIconUrl}
+                                  alt="Custom"
+                                  referrerPolicy="no-referrer"
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : previewSlide.iconType === 'trophy' ? (
                                 <Sparkles className="w-5 h-5" />
                               ) : previewSlide.iconType === 'sparkles' ? (
                                 <Sparkles className="w-5 h-5" />
+                              ) : previewSlide.iconType === 'flag' ? (
+                                <Flag className="w-5 h-5" />
                               ) : (
                                 <DiscordIcon className="w-5 h-5" />
                               )}

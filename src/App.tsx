@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SimGame, CarSetup, UserAccount, SupportedF1GameId, VerificationStatus, FloatingBannerConfig } from './types';
 import { SIM_GAMES, INITIAL_SETUPS } from './data/mockData';
 import { DEFAULT_FLOATING_BANNER_CONFIG, DEFAULT_FLOATING_BANNER_ITEMS } from './data/bannerConfig';
@@ -9,6 +9,7 @@ import { DesktopHeader } from './components/DesktopHeader';
 import { AdminVerificationPanel } from './components/AdminVerificationPanel';
 import { FloatingBanner } from './components/FloatingBanner';
 import { BannerConfigModal } from './components/BannerConfigModal';
+import { F1SetupEngineerChat } from './components/F1SetupEngineerChat';
 
 export default function App() {
   // Active game selected in the marketplace (defaults to F1 25)
@@ -78,69 +79,88 @@ export default function App() {
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState<boolean>(false);
   const [isBannerConfigOpen, setIsBannerConfigOpen] = useState<boolean>(false);
 
-  // Floating Banner / Ad Box state persisted in localStorage
+  // Floating Banner / Ad Box state with global server sync and local cache fallback
   const [bannerConfig, setBannerConfig] = useState<FloatingBannerConfig>(() => {
     try {
       const stored = localStorage.getItem('ddl_floating_banner_config');
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (parsed && parsed.items && Array.isArray(parsed.items)) {
-          // Ensure first default slide reflects updated PRL League advertisement
-          const updatedItems = parsed.items.map((it: any, idx: number) => {
-            if (
-              it.id === 'discord-community' ||
-              it.id === 'prl-league-ad' ||
-              it.title === 'Join DDL Setup Discord' ||
-              (idx === 0 && it.badgeText === 'HOT COMMUNITY')
-            ) {
-              return {
-                ...it,
-                id: 'prl-league-ad',
-                title: 'Join PRL League',
-                highlightText: it.highlightText || 'Official League',
-                description: 'Access exclusive PRL League setups, race results, and connect with fellow league drivers.',
-                buttonText: 'Join PRL League',
-                buttonUrl: 'https://discord.gg/aFzAhfBy3',
-                badgeText: 'ADVERTISEMENT',
-                onlineCount: it.onlineCount || 428,
-                iconType: it.iconType || 'discord',
-                accentColor: it.accentColor || 'indigo',
-              };
-            }
-            return it;
-          });
-
-          // If fewer items existed in localStorage, append missing default slots up to DEFAULT_FLOATING_BANNER_ITEMS.length
-          while (updatedItems.length < DEFAULT_FLOATING_BANNER_ITEMS.length) {
-            const nextItem = DEFAULT_FLOATING_BANNER_ITEMS[updatedItems.length];
-            if (nextItem) {
-              updatedItems.push(nextItem);
-            } else {
-              break;
-            }
-          }
-
-          return {
-            ...parsed,
-            items: updatedItems,
-            intervalSeconds: parsed.intervalSeconds || 3,
-            autoRotate: parsed.autoRotate !== false,
-          };
+        if (parsed && typeof parsed === 'object') {
+          return parsed;
         }
-        return parsed;
       }
     } catch (e) {
-      console.warn('Could not read saved banner config', e);
+      console.warn('Could not read local banner cache', e);
     }
     return DEFAULT_FLOATING_BANNER_CONFIG;
   });
 
-  const handleSaveBannerConfig = (updated: FloatingBannerConfig) => {
+  // Global Synchronizer: fetch latest global banner advertisement configuration from server
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchGlobalBannerConfig = async () => {
+      try {
+        const res = await fetch('/api/banner-config');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.config && isMounted) {
+            setBannerConfig(data.config);
+            try {
+              localStorage.setItem('ddl_floating_banner_config', JSON.stringify(data.config));
+            } catch (err) {
+              // ignore cache write error
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Using cached banner configuration (server offline or starting)', err);
+      }
+    };
+
+    fetchGlobalBannerConfig();
+
+    // Poll every 8 seconds so all active visitors see any changes made by administrators in real-time
+    const pollInterval = setInterval(fetchGlobalBannerConfig, 8000);
+    window.addEventListener('focus', fetchGlobalBannerConfig);
+
+    return () => {
+      isMounted = false;
+      clearInterval(pollInterval);
+      window.removeEventListener('focus', fetchGlobalBannerConfig);
+    };
+  }, []);
+
+  const handleSaveBannerConfig = async (updated: FloatingBannerConfig) => {
+    // 1. Optimistic local update
     setBannerConfig(updated);
     try {
       localStorage.setItem('ddl_floating_banner_config', JSON.stringify(updated));
     } catch (e) {
-      console.warn('Could not persist banner config', e);
+      console.warn('Could not persist banner config to local cache', e);
+    }
+
+    // 2. Persist globally to server database so all visitors see the new advertisement slots and images
+    try {
+      const res = await fetch('/api/banner-config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updated),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.config) {
+          setBannerConfig(data.config);
+          console.log('✅ Global advertisement banner saved successfully to server database');
+        }
+      } else {
+        console.error('Server returned error while saving global banner config:', res.statusText);
+      }
+    } catch (err) {
+      console.error('Failed to save banner config globally to server:', err);
     }
   };
 
@@ -463,6 +483,16 @@ export default function App() {
         )}
         onOpenSettings={() => setIsBannerConfigOpen(true)}
         onSaveConfig={handleSaveBannerConfig}
+      />
+
+      {/* Specialized F1 Setup Engineer AI Chatbot Assistant (Bottom-Left Floating Widget) */}
+      <F1SetupEngineerChat
+        activeGameId={activeGame.id}
+        activeTrackId={activeTrackId}
+        onFilterMarketplace={(trackId, gameId) => {
+          if (trackId) handleTrackChange(trackId);
+          if (gameId) handleSelectGameById(gameId as SupportedF1GameId);
+        }}
       />
 
       {/* Admin Banner Configuration Modal */}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ExternalLink,
   ChevronLeft,
@@ -12,6 +12,8 @@ import {
   Check,
   Save,
   RotateCcw,
+  Upload,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { FloatingBannerConfig, FloatingBannerItem } from '../types';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -195,19 +197,12 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
   // Determine active slides list: Use config.items if present, otherwise default to top adsData
   const slides: FloatingBannerItem[] = React.useMemo(() => {
     if (config?.items && config.items.length > 0) {
-      if (config.items.length < adsData.length) {
-        const merged = [...config.items];
-        while (merged.length < adsData.length) {
-          merged.push(adsData[merged.length]);
-        }
-        return merged;
-      }
       return config.items;
     }
     return adsData;
   }, [config?.items]);
 
-  const activeIndex = Math.min(currentSlideIndex, slides.length - 1);
+  const activeIndex = Math.min(currentSlideIndex, Math.max(0, slides.length - 1));
   const currentSlide = slides[activeIndex] || adsData[0];
 
   // Inline form state for admin
@@ -219,6 +214,10 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
       setEditFormData({ ...currentSlide });
     }
   }, [currentSlideIndex, currentSlide, isEditingInline]);
+
+  if (config && config.enabled === false && !isAdmin) {
+    return null;
+  }
 
   // Reliable Auto-rotation timer: Rotates every 5 seconds
   useEffect(() => {
@@ -595,6 +594,7 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
                   className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400"
                 >
                   <option value="discord">Discord</option>
+                  <option value="custom">Custom Image / Logo</option>
                   <option value="trophy">Trophy</option>
                   <option value="sparkles">Sparkles</option>
                   <option value="zap">Zap (Speed)</option>
@@ -617,6 +617,54 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
                   <option value="red">Racing Red</option>
                   <option value="purple">Esports Purple</option>
                 </select>
+              </div>
+            </div>
+
+            {/* Custom Image Upload / URL in Inline Mode */}
+            <div className="p-2.5 bg-slate-950 rounded-lg border border-slate-800 space-y-1.5">
+              <label className="block text-[11px] font-bold text-slate-300">
+                Custom Slot Image / Logo:
+              </label>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="text"
+                  value={editFormData.customIconUrl || ''}
+                  onChange={(e) => {
+                    setEditFormData({
+                      ...editFormData,
+                      customIconUrl: e.target.value,
+                      iconType: e.target.value ? 'custom' : editFormData.iconType,
+                    });
+                  }}
+                  placeholder="https://... image link"
+                  className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-[11px] text-white focus:outline-none focus:border-amber-400 font-mono"
+                />
+                <label className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-bold rounded-lg border border-slate-700 flex items-center gap-1 transition-colors cursor-pointer shrink-0">
+                  <Upload className="w-3 h-3" />
+                  <span>Upload</span>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                          const dataUrl = ev.target?.result as string;
+                          if (dataUrl) {
+                            setEditFormData({
+                              ...editFormData,
+                              customIconUrl: dataUrl,
+                              iconType: 'custom',
+                            });
+                          }
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                </label>
               </div>
             </div>
 

@@ -165,6 +165,7 @@ export interface FloatingBannerItem {
   onlineCount?: number;
   iconType: 'discord' | 'custom' | 'sparkles' | 'trophy' | 'zap' | 'flag';
   customIconUrl?: string;
+  bannerImageUrl?: string;
   accentColor?: 'indigo' | 'red' | 'emerald' | 'cyan' | 'amber' | 'purple';
 }
 
@@ -183,5 +184,6 @@ export interface FloatingBannerConfig {
   onlineCount?: number;
   iconType?: 'discord' | 'custom' | 'sparkles' | 'trophy' | 'zap' | 'flag';
   customIconUrl?: string;
+  bannerImageUrl?: string;
   accentColor?: 'indigo' | 'red' | 'emerald' | 'cyan' | 'amber' | 'purple';
 }
