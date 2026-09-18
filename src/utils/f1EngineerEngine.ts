@@ -9,7 +9,6 @@ export interface DriverSetupValues {
   // 2. Transmission
   diffOnThrottle: number; // 10 - 100%
   diffOffThrottle: number; // 10 - 100%
-  engineBraking: number; // 0 - 100% (Engine Braking Adjustment)
 
   // 3. Suspension Geometry
   frontCamber: number; // -3.50° to -2.50°
@@ -29,9 +28,11 @@ export interface DriverSetupValues {
   brakePressure: number; // 80 - 100%
   brakeBias: number; // 50 - 70% (Front Brake Bias)
 
-  // 6. Tyres
-  frontTyrePressure: number; // 20.0 - 29.5 PSI
-  rearTyrePressure: number; // 19.0 - 26.5 PSI
+  // 6. Tyres (4 Individual Corners)
+  flTyrePressure: number; // 20.0 - 29.5 PSI (Front Left)
+  frTyrePressure: number; // 20.0 - 29.5 PSI (Front Right)
+  rlTyrePressure: number; // 19.0 - 26.5 PSI (Rear Left)
+  rrTyrePressure: number; // 19.0 - 26.5 PSI (Rear Right)
 }
 
 export const DEFAULT_SETUP_PRESETS: Record<string, { labelTr: string; labelEn: string; values: DriverSetupValues }> = {
@@ -43,7 +44,6 @@ export const DEFAULT_SETUP_PRESETS: Record<string, { labelTr: string; labelEn: s
       rearWing: 32,
       diffOnThrottle: 58,
       diffOffThrottle: 52,
-      engineBraking: 60,
       frontCamber: -2.50,
       rearCamber: -1.00,
       frontToe: 0.00,
@@ -56,8 +56,10 @@ export const DEFAULT_SETUP_PRESETS: Record<string, { labelTr: string; labelEn: s
       rearRideHeight: 40,
       brakePressure: 100,
       brakeBias: 55,
-      frontTyrePressure: 22.5,
-      rearTyrePressure: 20.5,
+      flTyrePressure: 22.5,
+      frTyrePressure: 22.5,
+      rlTyrePressure: 20.5,
+      rrTyrePressure: 20.5,
     },
   },
   high_downforce: {
@@ -68,7 +70,6 @@ export const DEFAULT_SETUP_PRESETS: Record<string, { labelTr: string; labelEn: s
       rearWing: 42,
       diffOnThrottle: 54,
       diffOffThrottle: 50,
-      engineBraking: 80,
       frontCamber: -2.50,
       rearCamber: -1.20,
       frontToe: 0.02,
@@ -81,8 +82,10 @@ export const DEFAULT_SETUP_PRESETS: Record<string, { labelTr: string; labelEn: s
       rearRideHeight: 41,
       brakePressure: 100,
       brakeBias: 55,
-      frontTyrePressure: 22.5,
-      rearTyrePressure: 20.5,
+      flTyrePressure: 22.5,
+      frTyrePressure: 22.5,
+      rlTyrePressure: 20.5,
+      rrTyrePressure: 20.5,
     },
   },
   low_drag: {
@@ -93,7 +96,6 @@ export const DEFAULT_SETUP_PRESETS: Record<string, { labelTr: string; labelEn: s
       rearWing: 19,
       diffOnThrottle: 60,
       diffOffThrottle: 54,
-      engineBraking: 50,
       frontCamber: -2.70,
       rearCamber: -0.90,
       frontToe: 0.00,
@@ -106,8 +108,10 @@ export const DEFAULT_SETUP_PRESETS: Record<string, { labelTr: string; labelEn: s
       rearRideHeight: 38,
       brakePressure: 100,
       brakeBias: 54,
-      frontTyrePressure: 23.0,
-      rearTyrePressure: 21.0,
+      flTyrePressure: 23.0,
+      frTyrePressure: 23.0,
+      rlTyrePressure: 21.0,
+      rrTyrePressure: 21.0,
     },
   },
   wet_weather: {
@@ -118,7 +122,6 @@ export const DEFAULT_SETUP_PRESETS: Record<string, { labelTr: string; labelEn: s
       rearWing: 44,
       diffOnThrottle: 50,
       diffOffThrottle: 50,
-      engineBraking: 40,
       frontCamber: -2.50,
       rearCamber: -1.00,
       frontToe: 0.05,
@@ -131,8 +134,10 @@ export const DEFAULT_SETUP_PRESETS: Record<string, { labelTr: string; labelEn: s
       rearRideHeight: 46,
       brakePressure: 95,
       brakeBias: 53,
-      frontTyrePressure: 21.5,
-      rearTyrePressure: 20.0,
+      flTyrePressure: 21.5,
+      frTyrePressure: 21.5,
+      rlTyrePressure: 20.0,
+      rrTyrePressure: 20.0,
     },
   },
 };
@@ -232,6 +237,15 @@ export function getCommonHandlingIssues(lang: Language = 'tr'): HandlingIssue[] 
         : 'Violent bouncing, jarring vibrations, or loss of control when clipping kerbs.',
     },
     {
+      id: 'qualifying_one_shot',
+      label: isTr ? 'Tek Tur / Sıralama Turu (Qualifying & Time Trial) Fizik Metası' : 'Qualifying / Time Trial Peak Performance Meta',
+      category: 'tyres',
+      icon: '⏱️',
+      description: isTr
+        ? 'Sıralamada 1. turdan itibaren maksimum karkas sertliği, anında reaksiyon ve çıkış turunda hızlı ısınma.'
+        : 'Maximize tire carcass rigidity, instantaneous turn-in response, and fast out-lap core temp build for Q1/Q3.',
+    },
+    {
       id: 'rear_tyre_overheating',
       label: isTr ? 'Arka Lastiklerin Aşırı Isınması & Hızlı Aşınma' : 'Rear Tyre Overheating & Thermal Degradation',
       category: 'tyres',
@@ -256,84 +270,214 @@ export function parseSetupFromText(input: string, base: DriverSetupValues): Driv
   const result = { ...base };
   const str = input.toLowerCase();
 
+  // Helper to extract first number after any matched pattern
+  const extractNum = (regexes: RegExp[]): number | null => {
+    for (const rx of regexes) {
+      const m = str.match(rx);
+      if (m && m[1] !== undefined) {
+        const val = parseFloat(m[1]);
+        if (!isNaN(val)) return val;
+      }
+    }
+    return null;
+  };
+
   // 1. Aerodynamics: Front Wing, Rear Wing
-  const wingMatch =
-    str.match(/(?:kanat|wing|aero)[^\d]*(\d+)[^\d]+(\d+)/i) ||
-    str.match(/(\d+)\s*[-/]\s*(\d+)\s*(?:kanat|wing)/i);
-  if (wingMatch) {
-    result.frontWing = Math.min(50, Math.max(0, parseInt(wingMatch[1], 10)));
-    result.rearWing = Math.min(50, Math.max(0, parseInt(wingMatch[2], 10)));
+  const fw = extractNum([
+    /(?:front\s*wing|ön\s*kanat|f_wing|fw)\s*[:=]?\s*(\d+)/i,
+  ]);
+  if (fw !== null) result.frontWing = Math.min(50, Math.max(0, Math.round(fw)));
+
+  const rw = extractNum([
+    /(?:rear\s*wing|arka\s*kanat|r_wing|rw)\s*[:=]?\s*(\d+)/i,
+  ]);
+  if (rw !== null) result.rearWing = Math.min(50, Math.max(0, Math.round(rw)));
+
+  const wingComboMatch =
+    str.match(/(?:wings?|kanatlar?|aero)\s*[:=]?\s*(\d+)\s*[-/,\s]+\s*(\d+)/i) ||
+    str.match(/(\d+)\s*[-/]\s*(\d+)\s*(?:wings?|kanat)/i);
+  if (wingComboMatch && fw === null && rw === null) {
+    result.frontWing = Math.min(50, Math.max(0, parseInt(wingComboMatch[1], 10)));
+    result.rearWing = Math.min(50, Math.max(0, parseInt(wingComboMatch[2], 10)));
   }
 
-  // 2. Transmission: Diff on/off, engine braking
-  const diffBothMatch = str.match(/(?:diff|diferansiyel)[^\d]*(\d+)[^\d]+(\d+)/i);
-  if (diffBothMatch) {
-    result.diffOnThrottle = Math.min(100, Math.max(10, parseInt(diffBothMatch[1], 10)));
-    result.diffOffThrottle = Math.min(100, Math.max(10, parseInt(diffBothMatch[2], 10)));
-  } else {
-    const diffOnMatch = str.match(/(?:diff\s*on|on-throttle|gaza basarken)[^\d]*(\d+)/i);
-    if (diffOnMatch) {
-      result.diffOnThrottle = Math.min(100, Math.max(10, parseInt(diffOnMatch[1], 10)));
-    }
-    const diffOffMatch = str.match(/(?:diff\s*off|off-throttle|gaz kes)[^\d]*(\d+)/i);
-    if (diffOffMatch) {
-      result.diffOffThrottle = Math.min(100, Math.max(10, parseInt(diffOffMatch[1], 10)));
-    }
+  // 2. Transmission: Diff On-Throttle, Diff Off-Throttle (No Engine Braking in F1 25/26)
+  const diffOn = extractNum([
+    /(?:differential\s*(?:adjustment)?\s*on\s*throttle|diff\s*on\s*throttle|on\s*throttle\s*diff|on-throttle|diff\s*on|gaza\s*basarken\s*diferansiyel|gaza\s*basarken)\s*[:=]?\s*(\d+)/i,
+  ]);
+  if (diffOn !== null) result.diffOnThrottle = Math.min(100, Math.max(10, Math.round(diffOn)));
+
+  const diffOff = extractNum([
+    /(?:differential\s*(?:adjustment)?\s*off\s*throttle|diff\s*off\s*throttle|off\s*throttle\s*diff|off-throttle|diff\s*off|gaz\s*keserken\s*diferansiyel|gaz\s*keserken|gaz\s*kesme)\s*[:=]?\s*(\d+)/i,
+  ]);
+  if (diffOff !== null) result.diffOffThrottle = Math.min(100, Math.max(10, Math.round(diffOff)));
+
+  const diffCombo = str.match(/(?:diff|diferansiyel)\s*[:=]?\s*(\d+)%?\s*[-/,\s]+\s*(\d+)%?/i);
+  if (diffCombo && diffOn === null && diffOff === null) {
+    result.diffOnThrottle = Math.min(100, Math.max(10, parseInt(diffCombo[1], 10)));
+    result.diffOffThrottle = Math.min(100, Math.max(10, parseInt(diffCombo[2], 10)));
   }
 
-  const ebMatch = str.match(/(?:engine\s*brak|motor\s*fren|eb)[^\d]*(\d+)/i);
-  if (ebMatch) {
-    result.engineBraking = Math.min(100, Math.max(0, parseInt(ebMatch[1], 10)));
+  // 3. Suspension Geometry: Front Camber, Rear Camber, Front Toe-Out, Rear Toe-In
+  const fc = extractNum([
+    /(?:front\s*camber|ön\s*kamber|f_camber)\s*[:=]?\s*(-?\d+(?:\.\d+)?)/i,
+  ]);
+  if (fc !== null) {
+    const normFC = fc > 0 ? -fc : fc;
+    result.frontCamber = Math.min(-2.50, Math.max(-3.50, parseFloat(normFC.toFixed(2))));
   }
 
-  // 3. Suspension Geometry: Camber & Toe
-  const camberMatch = str.match(/(?:camber|kamber)[^\d-]*(-?\d+\.?\d*)[^\d-]+(-?\d+\.?\d*)/i);
-  if (camberMatch) {
-    result.frontCamber = parseFloat(camberMatch[1]);
-    result.rearCamber = parseFloat(camberMatch[2]);
-  }
-  const toeMatch = str.match(/(?:toe)[^\d]*(\d+\.?\d*)[^\d]+(\d+\.?\d*)/i);
-  if (toeMatch) {
-    result.frontToe = parseFloat(toeMatch[1]);
-    result.rearToe = parseFloat(toeMatch[2]);
+  const rc = extractNum([
+    /(?:rear\s*camber|arka\s*kamber|r_camber)\s*[:=]?\s*(-?\d+(?:\.\d+)?)/i,
+  ]);
+  if (rc !== null) {
+    const normRC = rc > 0 ? -rc : rc;
+    result.rearCamber = Math.min(-0.70, Math.max(-2.20, parseFloat(normRC.toFixed(2))));
   }
 
-  // 4. Suspension: Front/Rear Susp, ARBs, Ride Height
-  const arbMatch = str.match(/(?:arb|viraj\s*demir|anti-roll)[^\d]*(\d+)[^\d]+(\d+)/i);
-  if (arbMatch) {
-    result.frontARB = Math.min(21, Math.max(1, parseInt(arbMatch[1], 10)));
-    result.rearARB = Math.min(21, Math.max(1, parseInt(arbMatch[2], 10)));
+  const camberCombo = str.match(/(?:camber|kamber)\s*[:=]?\s*(-?\d+\.?\d*)\s*[-/,\s]+\s*(-?\d+\.?\d*)/i);
+  if (camberCombo && fc === null && rc === null) {
+    const c1 = parseFloat(camberCombo[1]);
+    const c2 = parseFloat(camberCombo[2]);
+    result.frontCamber = Math.min(-2.50, Math.max(-3.50, c1 > 0 ? -c1 : c1));
+    result.rearCamber = Math.min(-0.70, Math.max(-2.20, c2 > 0 ? -c2 : c2));
   }
 
-  const suspMatch = str.match(/(?:susp|süspansiyon|yay)[^\d]*(\d+)[^\d]+(\d+)/i);
-  if (suspMatch) {
-    result.frontSuspension = Math.min(41, Math.max(1, parseInt(suspMatch[1], 10)));
-    result.rearSuspension = Math.min(41, Math.max(1, parseInt(suspMatch[2], 10)));
+  const fToe = extractNum([
+    /(?:front\s*toe(?:-out)?|front\s*toe\s*out|ön\s*toe(?:-out)?|f_toe)\s*[:=]?\s*(\d+(?:\.\d+)?)/i,
+  ]);
+  if (fToe !== null) result.frontToe = Math.min(0.50, Math.max(0.00, parseFloat(fToe.toFixed(2))));
+
+  const rToe = extractNum([
+    /(?:rear\s*toe(?:-in)?|rear\s*toe\s*in|arka\s*toe(?:-in)?|r_toe)\s*[:=]?\s*(\d+(?:\.\d+)?)/i,
+  ]);
+  if (rToe !== null) result.rearToe = Math.min(0.50, Math.max(0.00, parseFloat(rToe.toFixed(2))));
+
+  const toeCombo = str.match(/(?:toe)\s*[:=]?\s*(\d+\.?\d*)\s*[-/,\s]+\s*(\d+\.?\d*)/i);
+  if (toeCombo && fToe === null && rToe === null) {
+    result.frontToe = Math.min(0.50, Math.max(0.00, parseFloat(toeCombo[1])));
+    result.rearToe = Math.min(0.50, Math.max(0.00, parseFloat(toeCombo[2])));
   }
 
-  const rideMatch = str.match(/(?:ride|yükseklik|taban|height)[^\d]*(\d+)[^\d]+(\d+)/i);
-  if (rideMatch) {
-    result.frontRideHeight = Math.min(45, Math.max(10, parseInt(rideMatch[1], 10)));
-    result.rearRideHeight = Math.min(65, Math.max(30, parseInt(rideMatch[2], 10)));
+  // 4. Suspension: Front Suspension, Rear Suspension, Front ARB, Rear ARB, Front Ride Height, Rear Ride Height
+  const fSusp = extractNum([
+    /(?:front\s*suspension|front\s*susp|ön\s*süspansiyon|front\s*springs?|ön\s*yay(?:lar)?)\s*[:=]?\s*(\d+)/i,
+  ]);
+  if (fSusp !== null) result.frontSuspension = Math.min(41, Math.max(1, Math.round(fSusp)));
+
+  const rSusp = extractNum([
+    /(?:rear\s*suspension|rear\s*susp|arka\s*süspansiyon|rear\s*springs?|arka\s*yay(?:lar)?)\s*[:=]?\s*(\d+)/i,
+  ]);
+  if (rSusp !== null) result.rearSuspension = Math.min(41, Math.max(1, Math.round(rSusp)));
+
+  const suspCombo = str.match(/(?:suspension|süspansiyon|springs?|yaylar?)\s*[:=]?\s*(\d+)\s*[-/,\s]+\s*(\d+)/i);
+  if (suspCombo && fSusp === null && rSusp === null) {
+    result.frontSuspension = Math.min(41, Math.max(1, parseInt(suspCombo[1], 10)));
+    result.rearSuspension = Math.min(41, Math.max(1, parseInt(suspCombo[2], 10)));
   }
 
-  // 5. Brakes: Pressure & Bias
-  const brakeMatch = str.match(/(?:bias|fren\s*dengesi)[^\d]*(\d+)/i);
-  if (brakeMatch) {
-    const val = parseInt(brakeMatch[1], 10);
-    if (val >= 50 && val <= 70) result.brakeBias = val;
-  }
-  const pressureMatch = str.match(/(?:brake\s*pressure|fren\s*basınç)[^\d]*(\d+)/i);
-  if (pressureMatch) {
-    const val = parseInt(pressureMatch[1], 10);
-    if (val >= 80 && val <= 100) result.brakePressure = val;
+  const fARB = extractNum([
+    /(?:front\s*(?:anti-roll\s*bar|anti\s*roll\s*bar|arb)|ön\s*(?:viraj\s*demiri|arb))\s*[:=]?\s*(\d+)/i,
+  ]);
+  if (fARB !== null) result.frontARB = Math.min(21, Math.max(1, Math.round(fARB)));
+
+  const rARB = extractNum([
+    /(?:rear\s*(?:anti-roll\s*bar|anti\s*roll\s*bar|arb)|arka\s*(?:viraj\s*demiri|arb))\s*[:=]?\s*(\d+)/i,
+  ]);
+  if (rARB !== null) result.rearARB = Math.min(21, Math.max(1, Math.round(rARB)));
+
+  const arbCombo = str.match(/(?:anti-roll\s*bar|anti\s*roll\s*bar|arb|viraj\s*demiri)\s*[:=]?\s*(\d+)\s*[-/,\s]+\s*(\d+)/i);
+  if (arbCombo && fARB === null && rARB === null) {
+    result.frontARB = Math.min(21, Math.max(1, parseInt(arbCombo[1], 10)));
+    result.rearARB = Math.min(21, Math.max(1, parseInt(arbCombo[2], 10)));
   }
 
-  // 6. Tyres: Front & Rear Pressures
-  const tyreMatch = str.match(/(?:tyre|lastik|psi|pressure)[^\d]*(\d+\.?\d*)[^\d]+(\d+\.?\d*)/i);
-  if (tyreMatch) {
-    result.frontTyrePressure = parseFloat(tyreMatch[1]);
-    result.rearTyrePressure = parseFloat(tyreMatch[2]);
+  const fRide = extractNum([
+    /(?:front\s*ride\s*height|front\s*ride|ön\s*sürüş\s*yüksekliği|ön\s*taban)\s*[:=]?\s*(\d+)/i,
+  ]);
+  if (fRide !== null) result.frontRideHeight = Math.min(45, Math.max(10, Math.round(fRide)));
+
+  const rRide = extractNum([
+    /(?:rear\s*ride\s*height|rear\s*ride|arka\s*sürüş\s*yüksekliği|arka\s*taban)\s*[:=]?\s*(\d+)/i,
+  ]);
+  if (rRide !== null) result.rearRideHeight = Math.min(65, Math.max(30, Math.round(rRide)));
+
+  const rideCombo = str.match(/(?:ride\s*height|sürüş\s*yüksekliği|taban\s*yüksekliği|taban)\s*[:=]?\s*(\d+)\s*[-/,\s]+\s*(\d+)/i);
+  if (rideCombo && fRide === null && rRide === null) {
+    result.frontRideHeight = Math.min(45, Math.max(10, parseInt(rideCombo[1], 10)));
+    result.rearRideHeight = Math.min(65, Math.max(30, parseInt(rideCombo[2], 10)));
+  }
+
+  // 5. Brakes: Brake Pressure, Front Brake Bias
+  const bPress = extractNum([
+    /(?:brake\s*pressure|fren\s*basıncı|fren\s*basınç)\s*[:=]?\s*(\d+)/i,
+  ]);
+  if (bPress !== null) result.brakePressure = Math.min(100, Math.max(80, Math.round(bPress)));
+
+  const bBias = extractNum([
+    /(?:front\s*brake\s*bias|brake\s*bias|fren\s*dengesi|ön\s*fren\s*bias|ön\s*fren\s*dengesi|bias)\s*[:=]?\s*(\d+)/i,
+  ]);
+  if (bBias !== null) result.brakeBias = Math.min(70, Math.max(50, Math.round(bBias)));
+
+  // 6. Tyres: 4 Individual Corner Pressures (FL, FR, RL, RR)
+  // Individual corners
+  const fl = extractNum([
+    /(?:front\s*left|ön\s*sol|fl)\s*(?:tyres?|tires?|lastik|psi|pressure)?\s*[:=]?\s*(\d+(?:\.\d+)?)/i,
+  ]);
+  if (fl !== null) result.flTyrePressure = Math.min(29.5, Math.max(20.0, parseFloat(fl.toFixed(1))));
+
+  const fr = extractNum([
+    /(?:front\s*right|ön\s*sağ|fr)\s*(?:tyres?|tires?|lastik|psi|pressure)?\s*[:=]?\s*(\d+(?:\.\d+)?)/i,
+  ]);
+  if (fr !== null) result.frTyrePressure = Math.min(29.5, Math.max(20.0, parseFloat(fr.toFixed(1))));
+
+  const rl = extractNum([
+    /(?:rear\s*left|arka\s*sol|rl)\s*(?:tyres?|tires?|lastik|psi|pressure)?\s*[:=]?\s*(\d+(?:\.\d+)?)/i,
+  ]);
+  if (rl !== null) result.rlTyrePressure = Math.min(26.5, Math.max(19.0, parseFloat(rl.toFixed(1))));
+
+  const rr = extractNum([
+    /(?:rear\s*right|arka\s*sağ|rr)\s*(?:tyres?|tires?|lastik|psi|pressure)?\s*[:=]?\s*(\d+(?:\.\d+)?)/i,
+  ]);
+  if (rr !== null) result.rrTyrePressure = Math.min(26.5, Math.max(19.0, parseFloat(rr.toFixed(1))));
+
+  // 4-tyre combo: e.g. "tyres: 22.5 22.5 20.5 20.5" or "psi 22.5, 22.5, 20.5, 20.5"
+  const fourTyreCombo = str.match(/(?:tyres?|tires?|lastik(?:ler)?|psi|pressures?)\s*[:=]?\s*(\d+\.?\d*)\s*[-/,\s]+\s*(\d+\.?\d*)\s*[-/,\s]+\s*(\d+\.?\d*)\s*[-/,\s]+\s*(\d+\.?\d*)/i);
+  if (fourTyreCombo && fl === null && fr === null && rl === null && rr === null) {
+    result.flTyrePressure = Math.min(29.5, Math.max(20.0, parseFloat(fourTyreCombo[1])));
+    result.frTyrePressure = Math.min(29.5, Math.max(20.0, parseFloat(fourTyreCombo[2])));
+    result.rlTyrePressure = Math.min(26.5, Math.max(19.0, parseFloat(fourTyreCombo[3])));
+    result.rrTyrePressure = Math.min(26.5, Math.max(19.0, parseFloat(fourTyreCombo[4])));
+  }
+
+  // Front pair / Rear pair fallback
+  const fPair = extractNum([
+    /(?:front\s*(?:tyres?|tires?)\s*(?:pressure)?|front\s*psi|ön\s*lastik(?:ler)?\s*(?:basıncı)?|ön\s*psi)\s*[:=]?\s*(\d+(?:\.\d+)?)/i,
+  ]);
+  if (fPair !== null && fl === null && fr === null) {
+    const val = Math.min(29.5, Math.max(20.0, parseFloat(fPair.toFixed(1))));
+    result.flTyrePressure = val;
+    result.frTyrePressure = val;
+  }
+
+  const rPair = extractNum([
+    /(?:rear\s*(?:tyres?|tires?)\s*(?:pressure)?|rear\s*psi|arka\s*lastik(?:ler)?\s*(?:basıncı)?|arka\s*psi)\s*[:=]?\s*(\d+(?:\.\d+)?)/i,
+  ]);
+  if (rPair !== null && rl === null && rr === null) {
+    const val = Math.min(26.5, Math.max(19.0, parseFloat(rPair.toFixed(1))));
+    result.rlTyrePressure = val;
+    result.rrTyrePressure = val;
+  }
+
+  // 2-value combo (Front / Rear pair)
+  const twoTyreCombo = str.match(/(?:tyres?|tires?|lastik(?:ler)?|psi|pressures?)\s*[:=]?\s*(\d+\.?\d*)\s*[-/,\s]+\s*(\d+\.?\d*)/i);
+  if (twoTyreCombo && !fourTyreCombo && fl === null && fr === null && rl === null && rr === null && fPair === null && rPair === null) {
+    const fVal = Math.min(29.5, Math.max(20.0, parseFloat(twoTyreCombo[1])));
+    const rVal = Math.min(26.5, Math.max(19.0, parseFloat(twoTyreCombo[2])));
+    result.flTyrePressure = fVal;
+    result.frTyrePressure = fVal;
+    result.rlTyrePressure = rVal;
+    result.rrTyrePressure = rVal;
   }
 
   return result;
@@ -352,6 +496,146 @@ export function diagnoseHandlingIssueWithSetup(
   const trackName = track ? track.name : trackId || (isTr ? 'Aktif Pist' : 'Current Circuit');
   const query = issueIdOrQuery.toLowerCase();
 
+  // 0. Tek Tur / Sıralama Turu (Qualifying / Time Trial) High-Pressure Meta
+  if (
+    query.includes('qualifying') ||
+    query.includes('time_trial') ||
+    query.includes('one_shot') ||
+    query.includes('sıralama') ||
+    query.includes('tek tur') ||
+    query.includes('hot lap') ||
+    query.includes('pole position')
+  ) {
+    const targetFLPSI = +(Math.min(29.5, Math.max(28.0, setup.flTyrePressure < 27.5 ? 28.5 : setup.flTyrePressure))).toFixed(1);
+    const targetFRPSI = +(Math.min(29.5, Math.max(28.0, setup.frTyrePressure < 27.5 ? 28.5 : setup.frTyrePressure))).toFixed(1);
+    const targetRLPSI = +(Math.min(26.5, Math.max(25.0, setup.rlTyrePressure < 24.5 ? 25.5 : setup.rlTyrePressure))).toFixed(1);
+    const targetRRPSI = +(Math.min(26.5, Math.max(25.0, setup.rrTyrePressure < 24.5 ? 25.5 : setup.rrTyrePressure))).toFixed(1);
+    const targetDiffOn = Math.min(55, Math.max(50, setup.diffOnThrottle));
+    const targetRearARB = Math.min(3, Math.max(1, setup.rearARB));
+    const targetBrakePress = 100;
+    const targetBrakeBias = 54;
+
+    return isTr
+      ? {
+          title: `⏱️ ${trackName} — Tek Tur / Sıralama (Qualifying & Time Trial) Fizik & Meta Analizi`,
+          summary: `Sıralama turlarında (1-Shot / Q1-Q3) maksimum tur zamanı elde etmek için yüksek karkas rijitliği, anında direksiyon tepkisi ve tek çıkış turunda (Out-Lap) hızlı termal ısınma gereklidir.`,
+          problemAnalysis: `Yarış temposunun aksine sıralama turunda düşük lastik basıncı kullanmak YANLIŞTIR. Düşük basınçlar lastik yanaklarında esnemeye (deflection) ve viraj girişinde gecikmeli direksiyon hissine yol açar. Basınçlar yüksek tutularak karkas sertleştirilir, ilk virajdan itibaren %100 yol tutuş elde edilir.`,
+          adjustments: [
+            {
+              category: 'Tyres',
+              parameter: 'Ön Lastik Basınçları (FL & FR Tyres)',
+              currentValue: `FL: ${setup.flTyrePressure} / FR: ${setup.frTyrePressure} PSI`,
+              recommendedValue: `FL: ${targetFLPSI} / FR: ${targetFRPSI} PSI`,
+              changeDelta: `Yüksek Basınç Metası`,
+              adjustment: `Ön lastik basınçlarını FL: ${targetFLPSI} / FR: ${targetFRPSI} PSI seviyesine yükselt`,
+              impact: 'Lastik yanak esnemesini yok ederek apexe anında jilet gibi keskin yönlenme verir.',
+              urgency: 'high',
+            },
+            {
+              category: 'Tyres',
+              parameter: 'Arka Lastik Basınçları (RL & RR Tyres)',
+              currentValue: `RL: ${setup.rlTyrePressure} / RR: ${setup.rrTyrePressure} PSI`,
+              recommendedValue: `RL: ${targetRLPSI} / RR: ${targetRRPSI} PSI`,
+              changeDelta: `Yüksek Basınç Metası`,
+              adjustment: `Arka lastik basınçlarını RL: ${targetRLPSI} / RR: ${targetRRPSI} PSI seviyesine getir`,
+              impact: 'Çıkış turunda (Out-Lap) çekiş karkasını hızla optimum 95°C-102°C çalışma penceresine sokar.',
+              urgency: 'high',
+            },
+            {
+              category: 'Transmission',
+              parameter: 'Gaza Basarken Diferansiyel (% On-Throttle)',
+              currentValue: `%${setup.diffOnThrottle}`,
+              recommendedValue: `%${targetDiffOn}`,
+              changeDelta: `%${targetDiffOn - setup.diffOnThrottle}`,
+              adjustment: `On-Throttle diff'i %${targetDiffOn} seviyesine çek`,
+              impact: 'Tek turda soğuk/taze lastiklerde viraj çıkışı ani spin (snap-oversteer) riskini sıfırlar.',
+              urgency: 'high',
+            },
+            {
+              category: 'Suspension',
+              parameter: 'Arka Viraj Demiri (Rear ARB)',
+              currentValue: setup.rearARB,
+              recommendedValue: targetRearARB,
+              changeDelta: `${targetRearARB - setup.rearARB}`,
+              adjustment: `Arka ARB'yi ${targetRearARB} seviyesine yumuşat (Metada 1-2 tık)`,
+              impact: 'Bordürlerden geçerken ve viraj çıkışlarında arka aksın asfalta yapışmasını sağlar.',
+              urgency: 'high',
+            },
+            {
+              category: 'Brakes',
+              parameter: 'Fren Basıncı & Fren Dengesi',
+              currentValue: `%${setup.brakePressure} / %${setup.brakeBias}`,
+              recommendedValue: `%${targetBrakePress} / %${targetBrakeBias}`,
+              changeDelta: `Ayarla`,
+              adjustment: `Fren basıncını %100, fren dengesini %54-55 olarak sabitle`,
+              impact: 'Maksimum durdurma gücü sağlarken ön kilitlenmeleri ve arka savrulmaları önler.',
+              urgency: 'medium',
+            },
+          ],
+          telemetryTip: 'Çıkış turunun (out-lap) son sektöründe lastikleri aşırı kaydırmadan fren ve ivmelenmelerle iç çekirdek ısısını yakalayın.',
+          quickActionSummary: `Ön lastikleri ${targetFLPSI} PSI, arka lastikleri ${targetRLPSI} PSI'a yükseltin; Arka ARB'yi ${targetRearARB}'e yumuşatıp On-Throttle Diff'i %${targetDiffOn} yapın.`,
+        }
+      : {
+          title: `⏱️ ${trackName} — Qualifying & Time Trial Peak Performance Meta Setup`,
+          summary: `For maximum 1-lap qualifying pace (Q1-Q3 / Time Trial), priority shifts to high carcass stiffness, instant turn-in articulation, and rapid out-lap core thermal buildup.`,
+          problemAnalysis: `Contrary to race stint logic, lowering tyre pressures for qualifying is an amateur mistake. Lower pressure causes sidewall deflection and sluggish turn-in. Higher pressures stiffen the tire carcass, yielding razor-sharp apex bite from Turn 1.`,
+          adjustments: [
+            {
+              category: 'Tyres',
+              parameter: 'Front Tyre Pressures (FL & FR Tyres)',
+              currentValue: `FL: ${setup.flTyrePressure} / FR: ${setup.frTyrePressure} PSI`,
+              recommendedValue: `FL: ${targetFLPSI} / FR: ${targetFRPSI} PSI`,
+              changeDelta: `High-Pressure Meta`,
+              adjustment: `Raise front tyre pressures to FL: ${targetFLPSI} / FR: ${targetFRPSI} PSI`,
+              impact: 'Eliminates tire carcass squish for instantaneous turn-in response.',
+              urgency: 'high',
+            },
+            {
+              category: 'Tyres',
+              parameter: 'Rear Tyre Pressures (RL & RR Tyres)',
+              currentValue: `RL: ${setup.rlTyrePressure} / RR: ${setup.rrTyrePressure} PSI`,
+              recommendedValue: `RL: ${targetRLPSI} / RR: ${targetRRPSI} PSI`,
+              changeDelta: `High-Pressure Meta`,
+              adjustment: `Set rear tyre pressures to RL: ${targetRLPSI} / RR: ${targetRRPSI} PSI`,
+              impact: 'Builds internal carcass core temperature quickly on the out-lap for Turn 1 traction.',
+              urgency: 'high',
+            },
+            {
+              category: 'Transmission',
+              parameter: 'Differential On-Throttle',
+              currentValue: `${setup.diffOnThrottle}%`,
+              recommendedValue: `${targetDiffOn}%`,
+              changeDelta: `${targetDiffOn - setup.diffOnThrottle}%`,
+              adjustment: `Set on-throttle differential to ${targetDiffOn}%`,
+              impact: 'Prevents power-on snap spins when aggressively unleashing full ERS deployment.',
+              urgency: 'high',
+            },
+            {
+              category: 'Suspension',
+              parameter: 'Rear Anti-Roll Bar (Rear ARB)',
+              currentValue: setup.rearARB,
+              recommendedValue: targetRearARB,
+              changeDelta: `${targetRearARB - setup.rearARB}`,
+              adjustment: `Soften rear ARB down to ${targetRearARB} (1-2 click community meta)`,
+              impact: 'Unlocks maximum exit traction over kerbs without lifting inside rear wheel.',
+              urgency: 'high',
+            },
+            {
+              category: 'Brakes',
+              parameter: 'Brake Pressure & Bias',
+              currentValue: `${setup.brakePressure}% / ${setup.brakeBias}%`,
+              recommendedValue: `${targetBrakePress}% / ${targetBrakeBias}%`,
+              changeDelta: `Calibrate`,
+              adjustment: `Lock brake pressure to 100% and brake bias to 54-55%`,
+              impact: 'Provides maximum deceleration without lock-ups under heavy threshold braking.',
+              urgency: 'medium',
+            },
+          ],
+          telemetryTip: 'In Sector 3 of your out-lap, warm carcass internal core with firm brake applications rather than harsh lateral scrubbing.',
+          quickActionSummary: `Raise front tyres to ${targetFLPSI} PSI, rear tyres to ${targetRLPSI} PSI; soften rear ARB to ${targetRearARB} and diff on-throttle to ${targetDiffOn}%.`,
+        };
+  }
+
   // 1. Düzlük Hızı Yetersiz / Lack of top speed / Low Top Speed
   if (
     query.includes('lack_of_top_speed') ||
@@ -364,17 +648,18 @@ export function diagnoseHandlingIssueWithSetup(
   ) {
     const targetRearWing = Math.max(10, setup.rearWing - 4);
     const targetFrontWing = Math.max(15, setup.frontWing - 3);
-    const targetEngineBraking = Math.max(30, setup.engineBraking - 15);
+    const targetDiffOff = Math.max(50, setup.diffOffThrottle - 3);
     const targetFrontRide = Math.max(10, setup.frontRideHeight - 2);
     const targetRearRide = Math.max(30, setup.rearRideHeight - 2);
     const targetFrontCamber = -2.50;
-    const targetRearPSI = +(setup.rearTyrePressure + 0.6).toFixed(1);
+    const targetRLPSI = +(setup.rlTyrePressure + 0.6).toFixed(1);
+    const targetRRPSI = +(setup.rrTyrePressure + 0.6).toFixed(1);
 
     return isTr
       ? {
           title: `🚀 ${trackName} — Düzlük Hızı & Drag Düşürme Analizi`,
-          summary: `Mevcut kanat açılarınız (${setup.frontWing}/${setup.rearWing}), motor freniniz (%${setup.engineBraking}) ve sürüş yüksekliğiniz (${setup.frontRideHeight}/${setup.rearRideHeight}) düzlüklerde aşırı aerodinamik ve mekanik sürüklenme (drag) yaratıyor.`,
-          problemAnalysis: `Arka kanadın ${setup.rearWing} seviyesinde bulunması DRS açıldığında dahi terminal hızı sınırlar. Ayrıca yüksek motor freni (%${setup.engineBraking}) viraj çıkışında düzlüğe ilk ivmelenmede direnç oluşturur. Kanatlar, taban yüksekliği ve motor freni kalibre edilerek düzlükte +7 ile +11 km/h kazanılır.`,
+          summary: `Mevcut kanat açılarınız (${setup.frontWing}/${setup.rearWing}), sürüş yüksekliğiniz (${setup.frontRideHeight}/${setup.rearRideHeight}) ve arka lastik basınçlarınız (RL ${setup.rlTyrePressure} / RR ${setup.rrTyrePressure} PSI) düzlüklerde aşırı aerodinamik ve yuvarlanma direnci (drag) yaratıyor.`,
+          problemAnalysis: `Arka kanadın ${setup.rearWing} seviyesinde bulunması DRS açıldığında dahi terminal hızı sınırlar. Arka lastik basınçlarının düşük kalması ise yuvarlanma sürtünmesini artırır. Kanatlar, taban yüksekliği ve 4 tekerlek lastik basınçları kalibre edilerek düzlükte +7 ile +11 km/h kazanılır.`,
           adjustments: [
             {
               category: 'Aero',
@@ -398,12 +683,12 @@ export function diagnoseHandlingIssueWithSetup(
             },
             {
               category: 'Transmission',
-              parameter: 'Motor Freni (Engine Braking)',
-              currentValue: `%${setup.engineBraking}`,
-              recommendedValue: `%${targetEngineBraking}`,
-              changeDelta: `-%${setup.engineBraking - targetEngineBraking}`,
-              adjustment: `Motor frenini %${setup.engineBraking}'den %${targetEngineBraking}'e düşür`,
-              impact: 'Gaz kesme anında motorun arka aksa uyguladığı iç sürtünmeyi azaltıp düzlük öncesi ivmeyi korur.',
+              parameter: 'Gaz Kesildiğinde Diferansiyel (% Off-Throttle)',
+              currentValue: `%${setup.diffOffThrottle}`,
+              recommendedValue: `%${targetDiffOff}`,
+              changeDelta: `-%${setup.diffOffThrottle - targetDiffOff}`,
+              adjustment: `Off-throttle diferansiyeli %${setup.diffOffThrottle}'den %${targetDiffOff}'ye düşür`,
+              impact: 'Viraj çıkışında düzlüğe taşınan momentuma serbestlik ve akıcılık kazandırır.',
               urgency: 'medium',
             },
             {
@@ -428,22 +713,22 @@ export function diagnoseHandlingIssueWithSetup(
             },
             {
               category: 'Tyres',
-              parameter: 'Arka Lastik Basınçları (Rear Tyres)',
-              currentValue: `${setup.rearTyrePressure} PSI`,
-              recommendedValue: `${targetRearPSI} PSI`,
+              parameter: 'Arka Lastik Basınçları (RL & RR Tyres)',
+              currentValue: `RL: ${setup.rlTyrePressure} / RR: ${setup.rrTyrePressure} PSI`,
+              recommendedValue: `RL: ${targetRLPSI} / RR: ${targetRRPSI} PSI`,
               changeDelta: `+0.6 PSI`,
-              adjustment: `Arka lastik basıncını ${setup.rearTyrePressure}'den ${targetRearPSI} PSI'a yükselt`,
+              adjustment: `Arka sol ve sağ lastik basınçlarını +0.6 PSI yükselterek RL ${targetRLPSI} / RR ${targetRRPSI} PSI yap`,
               impact: 'Yuvarlanma direncini düşürerek düzlük ivmesini keskinleştirir.',
               urgency: 'low',
             },
           ],
           telemetryTip: 'Düzlüğe bağlanan son virajda apexi erken yakalayıp düz hatta %100 tam gaza erken oturun.',
-          quickActionSummary: `Arka kanadı ${setup.rearWing} -> ${targetRearWing}, ön kanadı ${setup.frontWing} -> ${targetFrontWing} yapın, motor frenini %${targetEngineBraking}'e düşürün ve tabanı 2 tık alçaltın.`,
+          quickActionSummary: `Arka kanadı ${setup.rearWing} -> ${targetRearWing}, ön kanadı ${setup.frontWing} -> ${targetFrontWing} yapın, tabanı 2 tık alçaltın ve arka lastikleri +0.6 PSI artırın.`,
         }
       : {
           title: `🚀 ${trackName} — Top Speed Optimization & Drag Reduction`,
-          summary: `Your wing levels (${setup.frontWing}/${setup.rearWing}), engine braking (%${setup.engineBraking}) and ride heights (${setup.frontRideHeight}/${setup.rearRideHeight}) are creating excessive aerodynamic and mechanical parasitic drag.`,
-          problemAnalysis: `A rear wing of ${setup.rearWing} caps straight-line terminal velocity even with DRS enabled. Lowering wings, floor height and reducing engine braking unlocks +7 to +11 km/h on straights.`,
+          summary: `Your wing levels (${setup.frontWing}/${setup.rearWing}), ride heights (${setup.frontRideHeight}/${setup.rearRideHeight}) and rear tyre pressures (RL ${setup.rlTyrePressure} / RR ${setup.rrTyrePressure} PSI) are creating excessive aerodynamic and mechanical rolling drag.`,
+          problemAnalysis: `A rear wing of ${setup.rearWing} caps straight-line terminal velocity even with DRS enabled. Lowering wings, floor height and increasing rear tyre pressure to decrease rolling resistance unlocks +7 to +11 km/h on straights.`,
           adjustments: [
             {
               category: 'Aero',
@@ -467,12 +752,12 @@ export function diagnoseHandlingIssueWithSetup(
             },
             {
               category: 'Transmission',
-              parameter: 'Engine Braking',
-              currentValue: `${setup.engineBraking}%`,
-              recommendedValue: `${targetEngineBraking}%`,
-              changeDelta: `-${setup.engineBraking - targetEngineBraking}%`,
-              adjustment: `Reduce engine braking from ${setup.engineBraking}% down to ${targetEngineBraking}%`,
-              impact: 'Reduces internal powertrain overrun resistance onto straight exits.',
+              parameter: 'Differential Off-Throttle',
+              currentValue: `${setup.diffOffThrottle}%`,
+              recommendedValue: `${targetDiffOff}%`,
+              changeDelta: `-${setup.diffOffThrottle - targetDiffOff}%`,
+              adjustment: `Reduce off-throttle diff to ${targetDiffOff}%`,
+              impact: 'Unlocks momentum carry when trailing off throttle onto long straights.',
               urgency: 'medium',
             },
             {
@@ -497,17 +782,17 @@ export function diagnoseHandlingIssueWithSetup(
             },
             {
               category: 'Tyres',
-              parameter: 'Rear Tyre Pressure',
-              currentValue: `${setup.rearTyrePressure} PSI`,
-              recommendedValue: `${targetRearPSI} PSI`,
+              parameter: 'Rear Tyre Pressures (RL & RR Tyres)',
+              currentValue: `RL: ${setup.rlTyrePressure} / RR: ${setup.rrTyrePressure} PSI`,
+              recommendedValue: `RL: ${targetRLPSI} / RR: ${targetRRPSI} PSI`,
               changeDelta: `+0.6 PSI`,
-              adjustment: `Increase rear tyre pressure to ${targetRearPSI} PSI`,
-              impact: 'Decreases rolling tire deflection and straight-line drag.',
+              adjustment: `Increase rear left and right tyre pressures to RL ${targetRLPSI} / RR ${targetRRPSI} PSI`,
+              impact: 'Decreases rolling tire deflection and straight-line parasitic drag.',
               urgency: 'low',
             },
           ],
           telemetryTip: 'Prioritize exit geometric line in the corner leading onto the straight to apply full throttle earlier.',
-          quickActionSummary: `Drop rear wing ${setup.rearWing} -> ${targetRearWing}, front wing to ${targetFrontWing}, lower ride height by 2 clicks, and drop engine braking to ${targetEngineBraking}%.`,
+          quickActionSummary: `Drop rear wing ${setup.rearWing} -> ${targetRearWing}, front wing to ${targetFrontWing}, lower ride height by 2 clicks, and pump rear tyres +0.6 PSI.`,
         };
   }
 
@@ -527,12 +812,13 @@ export function diagnoseHandlingIssueWithSetup(
     const targetRearWing = Math.min(50, setup.rearWing + 2);
     const targetRearSusp = Math.max(1, setup.rearSuspension - 3);
     const targetRearToe = Math.min(0.50, +(setup.rearToe + 0.05).toFixed(2));
-    const targetRearPSI = +(setup.rearTyrePressure - 0.5).toFixed(1);
+    const targetRLPSI = +(setup.rlTyrePressure - 0.5).toFixed(1);
+    const targetRRPSI = +(setup.rrTyrePressure - 0.5).toFixed(1);
 
     return isTr
       ? {
           title: `🏎️ ${trackName} — Viraj Çıkışında Arka Kopması & Snap Oversteer Teşhisi`,
-          summary: `Gaza bastığınızda diferansiyel kilidinizin (%${setup.diffOnThrottle}), sert Arka Viraj Demiri (${setup.rearARB}) ve yay sertliğinizin (${setup.rearSuspension}) arka aksı kilitlediği ve ani tutunma kaybı (snap) yarattığı belirlendi.`,
+          summary: `Gaza bastığınızda diferansiyel kilidinizin (%${setup.diffOnThrottle}), sert Arka Viraj Demiri (${setup.rearARB}), yay sertliğinizin (${setup.rearSuspension}) ve arka lastik basınçlarınızın (RL: ${setup.rlTyrePressure} / RR: ${setup.rrTyrePressure} PSI) arka aksı kilitlediği ve ani tutunma kaybı (snap) yarattığı belirlendi.`,
           problemAnalysis: `Viraj çıkışında gaza basarken diferansiyel %${setup.diffOnThrottle} seviyesinde her iki arka tekeri aynı devirde dönmeye zorlar. Arka ARB (${setup.rearARB}) sert kaldığında iç tekerlek asfalttan havalanır, mikro patinaj başlatır ve anında spin tetikler.`,
           adjustments: [
             {
@@ -587,11 +873,11 @@ export function diagnoseHandlingIssueWithSetup(
             },
             {
               category: 'Tyres',
-              parameter: 'Arka Lastik Basınçları (Rear Tyres)',
-              currentValue: `${setup.rearTyrePressure} PSI`,
-              recommendedValue: `${targetRearPSI} PSI`,
+              parameter: 'Arka Lastik Basınçları (RL & RR Tyres)',
+              currentValue: `RL: ${setup.rlTyrePressure} / RR: ${setup.rrTyrePressure} PSI`,
+              recommendedValue: `RL: ${targetRLPSI} / RR: ${targetRRPSI} PSI`,
               changeDelta: `-0.5 PSI`,
-              adjustment: `Arka lastik basıncını ${setup.rearTyrePressure}'den ${targetRearPSI} PSI'a düşür`,
+              adjustment: `Arka lastik basınçlarını düşürerek RL ${targetRLPSI} / RR ${targetRRPSI} PSI seviyesine çek`,
               impact: 'Lastik taban temas alanını genişleterek patinajı ve aşırı ısınmayı önler.',
               urgency: 'medium',
             },
@@ -601,7 +887,7 @@ export function diagnoseHandlingIssueWithSetup(
         }
       : {
           title: `🏎️ ${trackName} — Rear Instability & Power-On Snap Oversteer`,
-          summary: `High on-throttle differential (%${setup.diffOnThrottle}) combined with stiff rear ARB (${setup.rearARB}) and springs (${setup.rearSuspension}) are breaking rear traction violently under acceleration.`,
+          summary: `High on-throttle differential (%${setup.diffOnThrottle}) combined with stiff rear ARB (${setup.rearARB}), springs (${setup.rearSuspension}) and rear tyre pressures (RL: ${setup.rlTyrePressure} / RR: ${setup.rrTyrePressure} PSI) are breaking rear traction violently under acceleration.`,
           problemAnalysis: `At %${setup.diffOnThrottle} on-throttle diff lock, the rear axle resists wheel speed differentiation on lock. A stiff rear roll bar lifts the inside tyre, inciting immediate snap oversteer.`,
           adjustments: [
             {
@@ -656,11 +942,11 @@ export function diagnoseHandlingIssueWithSetup(
             },
             {
               category: 'Tyres',
-              parameter: 'Rear Tyre Pressure',
-              currentValue: `${setup.rearTyrePressure} PSI`,
-              recommendedValue: `${targetRearPSI} PSI`,
+              parameter: 'Rear Tyre Pressures (RL & RR Tyres)',
+              currentValue: `RL: ${setup.rlTyrePressure} / RR: ${setup.rrTyrePressure} PSI`,
+              recommendedValue: `RL: ${targetRLPSI} / RR: ${targetRRPSI} PSI`,
               changeDelta: `-0.5 PSI`,
-              adjustment: `Lower rear tyre pressure from ${setup.rearTyrePressure} to ${targetRearPSI} PSI`,
+              adjustment: `Lower rear tyre pressures to RL: ${targetRLPSI} / RR: ${targetRRPSI} PSI`,
               impact: 'Expands tire contact footprint to stop micro-spin friction.',
               urgency: 'medium',
             },
@@ -684,7 +970,8 @@ export function diagnoseHandlingIssueWithSetup(
     const targetFrontWing = Math.min(50, setup.frontWing + 3);
     const targetFrontARB = Math.max(1, setup.frontARB - 3);
     const targetDiffOff = Math.max(50, Math.min(setup.diffOffThrottle - 4, 50));
-    const targetEngineBraking = Math.max(40, setup.engineBraking - 10);
+    const targetFLPSI = +(setup.flTyrePressure - 0.4).toFixed(1);
+    const targetFRPSI = +(setup.frTyrePressure - 0.4).toFixed(1);
     const targetFrontSusp = Math.max(1, setup.frontSuspension - 3);
     const targetFrontToe = Math.min(0.50, +(setup.frontToe + 0.04).toFixed(2));
     const targetFrontCamber = -2.50; // Maximum grip bite in F1 24/25
@@ -692,8 +979,8 @@ export function diagnoseHandlingIssueWithSetup(
     return isTr
       ? {
           title: `🛑 ${trackName} — Düşük Hızlı Virajlarda Kafadan Kayma (Turn-In Understeer) Çözümü`,
-          summary: `Ön Viraj Demiri (${setup.frontARB}), sert ön yaylar (${setup.frontSuspension}) ve Gaz Kesme diferansiyeli (%${setup.diffOffThrottle}) aracın burnunun apexe dönmesini engelliyor.`,
-          problemAnalysis: `Yavaş virajlarda mekanik tutuş ve şasi yönlenme çevikliği (yaw rotation) esastır. Ön ARB ${setup.frontARB} seviyesinde sert kaldığında dış ön tekerlek aşırı yüklenir ve dışa doğru sürüklenir (scrub).`,
+          summary: `Ön Viraj Demiri (${setup.frontARB}), sert ön yaylar (${setup.frontSuspension}), Gaz Kesme diferansiyeli (%${setup.diffOffThrottle}) ve ön lastik basınçlarınız (FL: ${setup.flTyrePressure} / FR: ${setup.frTyrePressure} PSI) aracın burnunun apexe dönmesini engelliyor.`,
+          problemAnalysis: `Yavaş virajlarda mekanik tutuş ve şasi yönlenme çevikliği (yaw rotation) esastır. Ön ARB ${setup.frontARB} seviyesinde sert kaldığında ve ön lastik basınçları yüksek olduğunda dış ön tekerlek aşırı yüklenir ve dışa doğru sürüklenir (scrub).`,
           adjustments: [
             {
               category: 'Aero',
@@ -726,14 +1013,14 @@ export function diagnoseHandlingIssueWithSetup(
               urgency: 'high',
             },
             {
-              category: 'Transmission',
-              parameter: 'Motor Freni (Engine Braking)',
-              currentValue: `%${setup.engineBraking}`,
-              recommendedValue: `%${targetEngineBraking}`,
-              changeDelta: `-%${setup.engineBraking - targetEngineBraking}`,
-              adjustment: `Motor frenini %${setup.engineBraking}'den %${targetEngineBraking}'e indir`,
-              impact: 'Arka tekerleklerin frenajda aracı geriye çekmesini önleyerek dönüş açısını (yaw) rahatlatır.',
-              urgency: 'medium',
+              category: 'Tyres',
+              parameter: 'Ön Lastik Basınçları (FL & FR Tyres)',
+              currentValue: `FL: ${setup.flTyrePressure} / FR: ${setup.frTyrePressure} PSI`,
+              recommendedValue: `FL: ${targetFLPSI} / FR: ${targetFRPSI} PSI`,
+              changeDelta: `-0.4 PSI`,
+              adjustment: `Ön sol ve sağ lastik basınçlarını düşürerek FL ${targetFLPSI} / FR ${targetFRPSI} PSI yap`,
+              impact: 'Ön lastik temas yüzeyini genişleterek direksiyon çevrildiğinde yolu ısırmasını (bite) sağlar.',
+              urgency: 'high',
             },
             {
               category: 'Suspension',
@@ -771,7 +1058,7 @@ export function diagnoseHandlingIssueWithSetup(
         }
       : {
           title: `🛑 ${trackName} — Slow-Speed Understeer & Turn-In Deficit`,
-          summary: `Stiff front ARB (${setup.frontARB}), front springs (${setup.frontSuspension}) and off-throttle diff (%${setup.diffOffThrottle}) are resisting yaw rotation into slow corners.`,
+          summary: `Stiff front ARB (${setup.frontARB}), front springs (${setup.frontSuspension}), off-throttle diff (%${setup.diffOffThrottle}) and front tyre pressures (FL: ${setup.flTyrePressure} / FR: ${setup.frTyrePressure} PSI) are resisting yaw rotation into slow corners.`,
           problemAnalysis: `In low speed turns, mechanical articulation dictates front bite. An excessively stiff front roll bar overloads the outer front tyre, creating front wash.`,
           adjustments: [
             {
@@ -805,14 +1092,14 @@ export function diagnoseHandlingIssueWithSetup(
               urgency: 'high',
             },
             {
-              category: 'Transmission',
-              parameter: 'Engine Braking',
-              currentValue: `${setup.engineBraking}%`,
-              recommendedValue: `${targetEngineBraking}%`,
-              changeDelta: `-${setup.engineBraking - targetEngineBraking}%`,
-              adjustment: `Reduce engine braking from ${setup.engineBraking}% to ${targetEngineBraking}%`,
-              impact: 'Relieves rear axle deceleration bind to smooth out corner entry yaw.',
-              urgency: 'medium',
+              category: 'Tyres',
+              parameter: 'Front Tyre Pressures (FL & FR Tyres)',
+              currentValue: `FL: ${setup.flTyrePressure} / FR: ${setup.frTyrePressure} PSI`,
+              recommendedValue: `FL: ${targetFLPSI} / FR: ${targetFRPSI} PSI`,
+              changeDelta: `-0.4 PSI`,
+              adjustment: `Lower front tyre pressures to FL: ${targetFLPSI} / FR: ${targetFRPSI} PSI (-0.4 PSI)`,
+              impact: 'Widens front tyre footprint to eliminate understeer scrub on turn-in.',
+              urgency: 'high',
             },
             {
               category: 'Suspension',
@@ -836,7 +1123,7 @@ export function diagnoseHandlingIssueWithSetup(
             },
           ],
           telemetryTip: 'Maintain light trail-braking pressure (5-10%) right up to the apex to keep load pinned on the steering axle.',
-          quickActionSummary: `Increase front wing to ${targetFrontWing}, soften front ARB to ${targetFrontARB}, drop coast diff to ${targetDiffOff}%, and reduce engine braking to ${targetEngineBraking}%.`,
+          quickActionSummary: `Increase front wing to ${targetFrontWing}, soften front ARB to ${targetFrontARB}, and drop coast diff to ${targetDiffOff}%.`,
         };
   }
 
@@ -851,14 +1138,15 @@ export function diagnoseHandlingIssueWithSetup(
     const targetBias = setup.brakeBias > 55 ? 54 : 56;
     const targetPressure = Math.max(95, setup.brakePressure - 3);
     const targetDiffOff = Math.min(65, setup.diffOffThrottle + 4);
-    const targetEngineBraking = Math.min(80, setup.engineBraking + 10);
+    const targetFLPSI = +(setup.flTyrePressure - 0.3).toFixed(1);
+    const targetFRPSI = +(setup.frTyrePressure - 0.3).toFixed(1);
     const targetFrontSusp = Math.min(41, setup.frontSuspension + 2);
 
     return isTr
       ? {
           title: `🎯 ${trackName} — Fren Kararlılığı & Kilitlenme (Lock-Up) Önleme`,
-          summary: `Fren dengeniz (%${setup.brakeBias}), fren basıncınız (%${setup.brakePressure}) ve motor freniniz (%${setup.engineBraking}) ağır fren bölgelerinde tekerlek kilitlenmesine ve şasi kararsızlığına yol açıyor.`,
-          problemAnalysis: `Ön fren dengesi %${setup.brakeBias} seviyesinde ağır frenaj anında ağırlık öne yığıldığında ön lastikler dönme momentumunu kaybeder ve kilitlenir. Dengeyi geriye alıp, off-throttle diferansiyeli ve motor frenini optimize ediyoruz.`,
+          summary: `Fren dengeniz (%${setup.brakeBias}), fren basıncınız (%${setup.brakePressure}) ve ön lastik basınçlarınız (FL: ${setup.flTyrePressure} / FR: ${setup.frTyrePressure} PSI) ağır fren bölgelerinde tekerlek kilitlenmesine ve şasi kararsızlığına yol açıyor.`,
+          problemAnalysis: `Ön fren dengesi %${setup.brakeBias} seviyesinde ağır frenaj anında ağırlık öne yığıldığında ön lastikler dönme momentumunu kaybeder ve kilitlenir. Dengeyi geriye alıp, off-throttle diferansiyeli ve ön lastik temas alanını optimize ediyoruz.`,
           adjustments: [
             {
               category: 'Brakes',
@@ -891,13 +1179,13 @@ export function diagnoseHandlingIssueWithSetup(
               urgency: 'medium',
             },
             {
-              category: 'Transmission',
-              parameter: 'Motor Freni (Engine Braking)',
-              currentValue: `%${setup.engineBraking}`,
-              recommendedValue: `%${targetEngineBraking}`,
-              changeDelta: `+${targetEngineBraking - setup.engineBraking}%`,
-              adjustment: `Motor frenini %${setup.engineBraking}'den %${targetEngineBraking}'e yükselt`,
-              impact: 'Vites küçültürken motor kompresyonunu artırarak aracı dengeli biçimde yavaşlatır.',
+              category: 'Tyres',
+              parameter: 'Ön Lastik Basınçları (FL & FR Tyres)',
+              currentValue: `FL: ${setup.flTyrePressure} / FR: ${setup.frTyrePressure} PSI`,
+              recommendedValue: `FL: ${targetFLPSI} / FR: ${targetFRPSI} PSI`,
+              changeDelta: `-0.3 PSI`,
+              adjustment: `Ön lastik basınçlarını -0.3 PSI indirerek FL ${targetFLPSI} / FR ${targetFRPSI} PSI yap`,
+              impact: 'Ön tekerlek temas alanını genişleterek kilitlenme eşiğini geciktirir.',
               urgency: 'medium',
             },
             {
@@ -916,7 +1204,7 @@ export function diagnoseHandlingIssueWithSetup(
         }
       : {
           title: `🎯 ${trackName} — Brake Stability & Lock-Up Prevention`,
-          summary: `Brake bias (%${setup.brakeBias}), threshold pressure (%${setup.brakePressure}) and engine braking (%${setup.engineBraking}) are inducing wheel lock-ups in heavy braking zones.`,
+          summary: `Brake bias (%${setup.brakeBias}), threshold pressure (%${setup.brakePressure}) and front tyre pressures (FL: ${setup.flTyrePressure} / FR: ${setup.frTyrePressure} PSI) are inducing wheel lock-ups in heavy braking zones.`,
           problemAnalysis: `At %${setup.brakeBias} front bias, dynamic pitch transfer overloads the front axle under heavy deceleration, locking wheels as steering input begins.`,
           adjustments: [
             {
@@ -950,13 +1238,13 @@ export function diagnoseHandlingIssueWithSetup(
               urgency: 'medium',
             },
             {
-              category: 'Transmission',
-              parameter: 'Engine Braking',
-              currentValue: `${setup.engineBraking}%`,
-              recommendedValue: `${targetEngineBraking}%`,
-              changeDelta: `+${targetEngineBraking - setup.engineBraking}%`,
-              adjustment: `Increase engine braking to ${targetEngineBraking}%`,
-              impact: 'Utilizes powertrain compression to assist deceleration stability.',
+              category: 'Tyres',
+              parameter: 'Front Tyre Pressures (FL & FR Tyres)',
+              currentValue: `FL: ${setup.flTyrePressure} / FR: ${setup.frTyrePressure} PSI`,
+              recommendedValue: `FL: ${targetFLPSI} / FR: ${targetFRPSI} PSI`,
+              changeDelta: `-0.3 PSI`,
+              adjustment: `Lower front tyre pressures to FL: ${targetFLPSI} / FR: ${targetFRPSI} PSI (-0.3 PSI)`,
+              impact: 'Expands front tyre contact footprint to delay wheel lock-up threshold.',
               urgency: 'medium',
             },
             {
@@ -989,7 +1277,8 @@ export function diagnoseHandlingIssueWithSetup(
     const targetFrontSusp = Math.max(1, setup.frontSuspension - 4);
     const targetRearSusp = Math.max(1, setup.rearSuspension - 3);
     const targetFrontARB = Math.max(1, setup.frontARB - 3);
-    const targetFrontPSI = +(setup.frontTyrePressure - 0.4).toFixed(1);
+    const targetFLPSI = +(setup.flTyrePressure - 0.4).toFixed(1);
+    const targetFRPSI = +(setup.frTyrePressure - 0.4).toFixed(1);
 
     return isTr
       ? {
@@ -1039,11 +1328,11 @@ export function diagnoseHandlingIssueWithSetup(
             },
             {
               category: 'Tyres',
-              parameter: 'Ön Lastik Basınçları (Front Tyres)',
-              currentValue: `${setup.frontTyrePressure} PSI`,
-              recommendedValue: `${targetFrontPSI} PSI`,
+              parameter: 'Ön Lastik Basınçları (FL & FR Tyres)',
+              currentValue: `FL: ${setup.flTyrePressure} / FR: ${setup.frTyrePressure} PSI`,
+              recommendedValue: `FL: ${targetFLPSI} / FR: ${targetFRPSI} PSI`,
               changeDelta: `-0.4 PSI`,
-              adjustment: `Ön lastik basıncını ${setup.frontTyrePressure}'den ${targetFrontPSI} PSI'a düşür`,
+              adjustment: `Ön sol ve sağ lastik basınçlarını FL ${targetFLPSI} / FR ${targetFRPSI} PSI'a düşür`,
               impact: 'Lastik yanak esnemesini artırarak bordür darbelerini ilk sönümleyen hava yastığı görevi görür.',
               urgency: 'low',
             },
@@ -1098,11 +1387,11 @@ export function diagnoseHandlingIssueWithSetup(
             },
             {
               category: 'Tyres',
-              parameter: 'Front Tyre Pressure',
-              currentValue: `${setup.frontTyrePressure} PSI`,
-              recommendedValue: `${targetFrontPSI} PSI`,
+              parameter: 'Front Tyre Pressures (FL & FR Tyres)',
+              currentValue: `FL: ${setup.flTyrePressure} / FR: ${setup.frTyrePressure} PSI`,
+              recommendedValue: `FL: ${targetFLPSI} / FR: ${targetFRPSI} PSI`,
               changeDelta: `-0.4 PSI`,
-              adjustment: `Lower front tyre pressure to ${targetFrontPSI} PSI`,
+              adjustment: `Lower front tyre pressures to FL: ${targetFLPSI} / FR: ${targetFRPSI} PSI`,
               impact: 'Allows tyre sidewall to act as a primary shock absorber over kerbs.',
               urgency: 'low',
             },
@@ -1121,25 +1410,27 @@ export function diagnoseHandlingIssueWithSetup(
     query.includes('aşınma') ||
     query.includes('tyre')
   ) {
-    const targetRearPSI = +(setup.rearTyrePressure - 0.8).toFixed(1);
+    const targetRLPSI = +(setup.rlTyrePressure - 0.8).toFixed(1);
+    const targetRRPSI = +(setup.rrTyrePressure - 0.8).toFixed(1);
+    const targetFLPSI = +(setup.flTyrePressure - 0.5).toFixed(1);
+    const targetFRPSI = +(setup.frTyrePressure - 0.5).toFixed(1);
     const targetDiffOn = Math.max(50, setup.diffOnThrottle - 6);
-    const targetEngineBraking = Math.max(40, setup.engineBraking - 15);
     const targetRearWing = Math.min(50, setup.rearWing + 2);
     const targetRearCamber = Math.min(-0.70, +(setup.rearCamber + 0.15).toFixed(2));
 
     return isTr
       ? {
           title: `🔥 ${trackName} — Lastik Aşırı Isınması & Termal Aşınma Önleme`,
-          summary: `Arka lastik basıncınız (${setup.rearTyrePressure} PSI), diferansiyel kilidiniz (%${setup.diffOnThrottle}) ve motor freniniz (%${setup.engineBraking}) viraj çıkışında mikro patinaj yaratarak lastik hamurunu aşırı ısıtıyor.`,
-          problemAnalysis: `Yüksek lastik basıncı temas alanını daraltır. Viraj çıkışında kayan lastik 105°C+ sıcaklığa çıkarak tutuşunu hızla kaybeder. Basıncı düşürüp diferansiyeli ve motor frenini yumuşatarak termal dengeyi sağlıyoruz.`,
+          summary: `Arka lastik basınçlarınız (RL: ${setup.rlTyrePressure} / RR: ${setup.rrTyrePressure} PSI) ve diferansiyel kilidiniz (%${setup.diffOnThrottle}) viraj çıkışında mikro patinaj yaratarak lastik hamurunu aşırı ısıtıyor.`,
+          problemAnalysis: `Yüksek lastik basıncı temas alanını daraltır. Viraj çıkışında kayan lastik 105°C+ sıcaklığa çıkarak tutuşunu hızla kaybeder. 4 tekerlek basınçlarını düşürüp diferansiyeli yumuşatarak termal dengeyi sağlıyoruz.`,
           adjustments: [
             {
               category: 'Tyres',
-              parameter: 'Arka Lastik Basınçları (Rear Tyres)',
-              currentValue: `${setup.rearTyrePressure} PSI`,
-              recommendedValue: `${targetRearPSI} PSI`,
+              parameter: 'Arka Lastik Basınçları (RL & RR Tyres)',
+              currentValue: `RL: ${setup.rlTyrePressure} / RR: ${setup.rrTyrePressure} PSI`,
+              recommendedValue: `RL: ${targetRLPSI} / RR: ${targetRRPSI} PSI`,
               changeDelta: `-0.8 PSI`,
-              adjustment: `Arka lastik basınçlarını ${setup.rearTyrePressure}'den ${targetRearPSI} PSI'a düşür (-0.8 PSI)`,
+              adjustment: `Arka lastik basınçlarını düşürerek RL: ${targetRLPSI} / RR: ${targetRRPSI} PSI yap (-0.8 PSI)`,
               impact: 'İç gaz genleşmesini dengeler ve aşırı sıcaklık artışını doğrudan keser.',
               urgency: 'high',
             },
@@ -1154,13 +1445,13 @@ export function diagnoseHandlingIssueWithSetup(
               urgency: 'high',
             },
             {
-              category: 'Transmission',
-              parameter: 'Motor Freni (Engine Braking)',
-              currentValue: `%${setup.engineBraking}`,
-              recommendedValue: `%${targetEngineBraking}`,
-              changeDelta: `-%${setup.engineBraking - targetEngineBraking}`,
-              adjustment: `Motor frenini %${setup.engineBraking}'den %${targetEngineBraking}'e düşür`,
-              impact: 'Yavaşlama anında arka lastiklerin sürüklenip ısınmasını önler.',
+              category: 'Tyres',
+              parameter: 'Ön Lastik Basınçları (FL & FR Tyres)',
+              currentValue: `FL: ${setup.flTyrePressure} / FR: ${setup.frTyrePressure} PSI`,
+              recommendedValue: `FL: ${targetFLPSI} / FR: ${targetFRPSI} PSI`,
+              changeDelta: `-0.5 PSI`,
+              adjustment: `Ön lastik basınçlarını FL: ${targetFLPSI} / FR: ${targetFRPSI} PSI'a düşür`,
+              impact: 'Viraj girişinde ön lastik omzunun kavrulmasını ve sürtünme kaynaklı aşınmasını önler.',
               urgency: 'medium',
             },
             {
@@ -1185,20 +1476,20 @@ export function diagnoseHandlingIssueWithSetup(
             },
           ],
           telemetryTip: 'Arka lastikleri soğutmak için viraj çıkışlarında 1 vites yüksek kalın (Early upshift) ve ani gaz hareketlerinden kaçının.',
-          quickActionSummary: `Arka lastik basıncını ${setup.rearTyrePressure} -> ${targetRearPSI} PSI'a indirin ve diferansiyeli %${targetDiffOn} yapın.`,
+          quickActionSummary: `Arka lastik basıncını RL ${targetRLPSI} / RR ${targetRRPSI} PSI'a indirin ve diferansiyeli %${targetDiffOn} yapın.`,
         }
       : {
           title: `🔥 ${trackName} — Tyre Overheating & Thermal Degradation Control`,
-          summary: `Rear tyre pressure (${setup.rearTyrePressure} PSI), on-throttle diff (%${setup.diffOnThrottle}) and engine braking (%${setup.engineBraking}) are causing continuous micro-wheelspin and thermal spikes.`,
-          problemAnalysis: `High pressures reduce the tyre contact patch. Under lateral loads, sliding surface friction overheats the carcass past 105°C. Lowering pressures, diff lock and engine braking restores thermal equilibrium.`,
+          summary: `Rear tyre pressures (RL: ${setup.rlTyrePressure} / RR: ${setup.rrTyrePressure} PSI) and on-throttle diff (%${setup.diffOnThrottle}) are causing continuous micro-wheelspin and thermal spikes.`,
+          problemAnalysis: `High pressures reduce the tyre contact patch. Under lateral loads, sliding surface friction overheats the carcass past 105°C. Lowering 4-corner pressures and diff lock restores thermal equilibrium.`,
           adjustments: [
             {
               category: 'Tyres',
-              parameter: 'Rear Tyre Pressures',
-              currentValue: `${setup.rearTyrePressure} PSI`,
-              recommendedValue: `${targetRearPSI} PSI`,
+              parameter: 'Rear Tyre Pressures (RL & RR Tyres)',
+              currentValue: `RL: ${setup.rlTyrePressure} / RR: ${setup.rrTyrePressure} PSI`,
+              recommendedValue: `RL: ${targetRLPSI} / RR: ${targetRRPSI} PSI`,
               changeDelta: `-0.8 PSI`,
-              adjustment: `Lower rear tyre pressures from ${setup.rearTyrePressure} down to ${targetRearPSI} PSI (-0.8 PSI)`,
+              adjustment: `Lower rear tyre pressures to RL: ${targetRLPSI} / RR: ${targetRRPSI} PSI (-0.8 PSI)`,
               impact: 'Compensates for thermal air expansion and cools the contact surface.',
               urgency: 'high',
             },
@@ -1213,13 +1504,13 @@ export function diagnoseHandlingIssueWithSetup(
               urgency: 'high',
             },
             {
-              category: 'Transmission',
-              parameter: 'Engine Braking',
-              currentValue: `${setup.engineBraking}%`,
-              recommendedValue: `${targetEngineBraking}%`,
-              changeDelta: `-${setup.engineBraking - targetEngineBraking}%`,
-              adjustment: `Reduce engine braking to ${targetEngineBraking}%`,
-              impact: 'Prevents rear tyre scrub and thermal build-up under heavy off-throttle deceleration.',
+              category: 'Tyres',
+              parameter: 'Front Tyre Pressures (FL & FR Tyres)',
+              currentValue: `FL: ${setup.flTyrePressure} / FR: ${setup.frTyrePressure} PSI`,
+              recommendedValue: `FL: ${targetFLPSI} / FR: ${targetFRPSI} PSI`,
+              changeDelta: `-0.5 PSI`,
+              adjustment: `Lower front tyre pressures to FL: ${targetFLPSI} / FR: ${targetFRPSI} PSI`,
+              impact: 'Reduces front tyre sliding friction across mid-corner lateral loads.',
               urgency: 'medium',
             },
             {
@@ -1244,7 +1535,7 @@ export function diagnoseHandlingIssueWithSetup(
             },
           ],
           telemetryTip: 'Short-shift one gear higher out of slow corners to avoid aggressive wheelspin on straights.',
-          quickActionSummary: `Lower rear tyre pressure to ${targetRearPSI} PSI and drop on-throttle diff to ${targetDiffOn}%.`,
+          quickActionSummary: `Lower rear tyre pressures to RL ${targetRLPSI} / RR ${targetRRPSI} PSI and drop on-throttle diff to ${targetDiffOn}%.`,
         };
   }
 
@@ -1253,15 +1544,16 @@ export function diagnoseHandlingIssueWithSetup(
   const targetDiffOff = Math.max(50, setup.diffOffThrottle - 2);
   const targetRearARB = Math.max(1, setup.rearARB - 2);
   const targetFrontWing = Math.min(50, setup.frontWing + 2);
-  const targetEngineBraking = Math.max(40, setup.engineBraking - 10);
+  const targetRLPSI = +(setup.rlTyrePressure - 0.4).toFixed(1);
+  const targetRRPSI = +(setup.rrTyrePressure - 0.4).toFixed(1);
   const targetFrontRide = Math.max(10, setup.frontRideHeight - 1);
   const targetRearRide = Math.max(30, setup.rearRideHeight - 1);
 
   return isTr
     ? {
         title: `🔧 ${trackName} — Tam Telemetri ve 6-Kategori Setup İnce Ayar Paketi`,
-        summary: `Mevcut setup parametrelerinize (${setup.frontWing}/${setup.rearWing} kanat, %${setup.diffOnThrottle}/%${setup.diffOffThrottle} diff, %${setup.engineBraking} motor freni, ${setup.frontARB}/${setup.rearARB} ARB, ${setup.frontRideHeight}/${setup.rearRideHeight} taban, ${setup.frontTyrePressure}/${setup.rearTyrePressure} PSI) göre önerilen telemetri revizyonu:`,
-        problemAnalysis: `Bildirilen araç davranışı dengesizliği; Diferansiyel, Viraj Demiri, Motor Freni ve Kanat oranlarının pist karakteristiğiyle tam örtüşmemesinden kaynaklanır.`,
+        summary: `Mevcut setup parametrelerinize (${setup.frontWing}/${setup.rearWing} kanat, %${setup.diffOnThrottle}/%${setup.diffOffThrottle} diff, ${setup.frontARB}/${setup.rearARB} ARB, ${setup.frontRideHeight}/${setup.rearRideHeight} taban, FL: ${setup.flTyrePressure} / FR: ${setup.frTyrePressure} / RL: ${setup.rlTyrePressure} / RR: ${setup.rrTyrePressure} PSI) göre önerilen telemetri revizyonu:`,
+        problemAnalysis: `Bildirilen araç davranışı dengesizliği; Diferansiyel, Viraj Demiri, 4-Köşe Lastik Basınçları ve Kanat oranlarının pist karakteristiğiyle tam örtüşmemesinden kaynaklanır.`,
         adjustments: [
           {
             category: 'Aero',
@@ -1285,12 +1577,12 @@ export function diagnoseHandlingIssueWithSetup(
           },
           {
             category: 'Transmission',
-            parameter: 'Motor Freni (Engine Braking)',
-            currentValue: `%${setup.engineBraking}`,
-            recommendedValue: `%${targetEngineBraking}`,
-            changeDelta: `-%${setup.engineBraking - targetEngineBraking}`,
-            adjustment: `Motor frenini %${setup.engineBraking}'den %${targetEngineBraking}'e ayarla`,
-            impact: 'Frenaj ve gaz kesme anında şasi stabilitesini artırır.',
+            parameter: 'Gaz Kesildiğinde Diferansiyel (% Off-Throttle)',
+            currentValue: `%${setup.diffOffThrottle}`,
+            recommendedValue: `%${targetDiffOff}`,
+            changeDelta: `-%${setup.diffOffThrottle - targetDiffOff}`,
+            adjustment: `Off-throttle diferansiyeli %${setup.diffOffThrottle}'den %${targetDiffOff}'e düşür`,
+            impact: 'Viraj ortasında aracın rahat dönmesini (rotation) ve apexe oturmasını sağlar.',
             urgency: 'medium',
           },
           {
@@ -1301,6 +1593,16 @@ export function diagnoseHandlingIssueWithSetup(
             changeDelta: `-${setup.rearARB - targetRearARB} tık`,
             adjustment: `Arka ARB'yi ${setup.rearARB}'den ${targetRearARB}'e yumuşat`,
             impact: 'Viraj çıkışında arka aksın yola oturmasını destekler.',
+            urgency: 'medium',
+          },
+          {
+            category: 'Tyres',
+            parameter: 'Arka Lastik Basınçları (RL & RR Tyres)',
+            currentValue: `RL: ${setup.rlTyrePressure} / RR: ${setup.rrTyrePressure} PSI`,
+            recommendedValue: `RL: ${targetRLPSI} / RR: ${targetRRPSI} PSI`,
+            changeDelta: `-0.4 PSI`,
+            adjustment: `Arka lastik basınçlarını RL ${targetRLPSI} / RR ${targetRRPSI} PSI seviyesine indir`,
+            impact: 'Arka lastik çekiş yüzeyini genişleterek çekiş ve yol tutuş stabilitesi sağlar.',
             urgency: 'medium',
           },
           {
@@ -1315,12 +1617,12 @@ export function diagnoseHandlingIssueWithSetup(
           },
         ],
         telemetryTip: 'Pistin en çok zaman kazanılan sektöründeki virajlara odaklanıp telemetri apex hızınızı referans alın.',
-        quickActionSummary: `Diferansiyeli %${targetDiffOn} seviyesine çekin, Arka ARB'yi ${targetRearARB} yapın ve motor frenini %${targetEngineBraking} seviyesine ayarlayın.`,
+        quickActionSummary: `Diferansiyeli %${targetDiffOn} seviyesine çekin, Arka ARB'yi ${targetRearARB} yapın ve arka lastik basınçlarını düşürün.`,
       }
     : {
         title: `🔧 ${trackName} — Complete 6-Category Telemetry & Calibration Package`,
-        summary: `Tailored adjustments based on your current setup (${setup.frontWing}/${setup.rearWing} wings, ${setup.diffOnThrottle}%/${setup.diffOffThrottle}% diff, ${setup.engineBraking}% engine braking, ${setup.frontARB}/${setup.rearARB} ARB, ${setup.frontRideHeight}/${setup.rearRideHeight} ride, ${setup.frontTyrePressure}/${setup.rearTyrePressure} PSI):`,
-        problemAnalysis: `Chassis handling deficits trace back to differential preload, anti-roll bar distribution, engine braking, and aerodynamic wing balance.`,
+        summary: `Tailored adjustments based on your current setup (${setup.frontWing}/${setup.rearWing} wings, ${setup.diffOnThrottle}%/${setup.diffOffThrottle}% diff, ${setup.frontARB}/${setup.rearARB} ARB, ${setup.frontRideHeight}/${setup.rearRideHeight} ride, FL: ${setup.flTyrePressure} / FR: ${setup.frTyrePressure} / RL: ${setup.rlTyrePressure} / RR: ${setup.rrTyrePressure} PSI):`,
+        problemAnalysis: `Chassis handling deficits trace back to differential preload, anti-roll bar distribution, 4-corner tyre pressures, and aerodynamic wing balance.`,
         adjustments: [
           {
             category: 'Aero',
@@ -1344,12 +1646,12 @@ export function diagnoseHandlingIssueWithSetup(
           },
           {
             category: 'Transmission',
-            parameter: 'Engine Braking',
-            currentValue: `${setup.engineBraking}%`,
-            recommendedValue: `${targetEngineBraking}%`,
-            changeDelta: `-${setup.engineBraking - targetEngineBraking}%`,
-            adjustment: `Calibrate engine braking from ${setup.engineBraking}% to ${targetEngineBraking}%`,
-            impact: 'Harmonizes deceleration weight transfer and rear tyre compliance.',
+            parameter: 'Differential Off-Throttle',
+            currentValue: `${setup.diffOffThrottle}%`,
+            recommendedValue: `${targetDiffOff}%`,
+            changeDelta: `-${setup.diffOffThrottle - targetDiffOff}%`,
+            adjustment: `Reduce off-throttle diff from ${setup.diffOffThrottle}% down to ${targetDiffOff}%`,
+            impact: 'Improves turn-in rotation on corner entry.',
             urgency: 'medium',
           },
           {
@@ -1360,6 +1662,16 @@ export function diagnoseHandlingIssueWithSetup(
             changeDelta: `-${setup.rearARB - targetRearARB} clicks`,
             adjustment: `Soften rear ARB from ${setup.rearARB} down to ${targetRearARB}`,
             impact: 'Allows progressive mechanical weight transfer on acceleration.',
+            urgency: 'medium',
+          },
+          {
+            category: 'Tyres',
+            parameter: 'Rear Tyre Pressures (RL & RR Tyres)',
+            currentValue: `RL: ${setup.rlTyrePressure} / RR: ${setup.rrTyrePressure} PSI`,
+            recommendedValue: `RL: ${targetRLPSI} / RR: ${targetRRPSI} PSI`,
+            changeDelta: `-0.4 PSI`,
+            adjustment: `Lower rear tyre pressures to RL: ${targetRLPSI} / RR: ${targetRRPSI} PSI`,
+            impact: 'Increases traction footprint on corner exit acceleration.',
             urgency: 'medium',
           },
           {
@@ -1374,6 +1686,6 @@ export function diagnoseHandlingIssueWithSetup(
           },
         ],
         telemetryTip: 'Focus on corner exit speed in the primary traction zones for maximum lap time gain.',
-        quickActionSummary: `Set on-throttle diff to ${targetDiffOn}%, soften rear ARB to ${targetRearARB}, and tune engine braking to ${targetEngineBraking}%.`,
+        quickActionSummary: `Set on-throttle diff to ${targetDiffOn}%, soften rear ARB to ${targetRearARB}, and adjust rear tyre pressures.`,
       };
 }

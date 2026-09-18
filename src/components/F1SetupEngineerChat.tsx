@@ -25,6 +25,12 @@ import {
   Compass,
   Activity,
   Disc,
+  CornerDownRight,
+  CheckCheck,
+  Bot,
+  User,
+  SlidersVertical,
+  Layers,
 } from 'lucide-react';
 import { TRACKS } from '../data/mockData';
 import { TrackFlagIcon } from '../utils/trackFlags';
@@ -33,9 +39,9 @@ import {
   DriverSetupValues,
   DEFAULT_SETUP_PRESETS,
   getCommonHandlingIssues,
-  diagnoseHandlingIssueWithSetup,
   parseSetupFromText,
-  DiagnosisResult,
+  diagnoseHandlingIssueWithSetup,
+  SetupAdjustment,
 } from '../utils/f1EngineerEngine';
 
 export interface F1SetupEngineerChatProps {
@@ -45,7 +51,6 @@ export interface F1SetupEngineerChatProps {
   onOpenSetupModal?: () => void;
 }
 
-type DiagnosticStep = 1 | 2 | 3;
 type SetupCategoryTab = 'all' | 'aero' | 'transmission' | 'geometry' | 'suspension' | 'brakes' | 'tyres';
 
 interface ChatMessage {
@@ -53,10 +58,10 @@ interface ChatMessage {
   sender: 'engineer' | 'user';
   text: string;
   timestamp: string;
-  step?: DiagnosticStep;
-  diagnosis?: DiagnosisResult;
+  adjustments?: SetupAdjustment[];
+  source?: 'gemini' | 'telemetry_engine';
   setupSnapshot?: DriverSetupValues;
-  selectedTrack?: string;
+  telemetryTip?: string;
 }
 
 export const F1SetupEngineerChat: React.FC<F1SetupEngineerChatProps> = ({
@@ -69,11 +74,12 @@ export const F1SetupEngineerChat: React.FC<F1SetupEngineerChatProps> = ({
 
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showTelemetryDrawer, setShowTelemetryDrawer] = useState(false);
   const [hasUnread, setHasUnread] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [appliedNotification, setAppliedNotification] = useState<string | null>(null);
 
-  // Diagnostic State
-  const [currentStep, setCurrentStep] = useState<DiagnosticStep>(1);
+  // Active Car Baseline Telemetry
   const [selectedTrack, setSelectedTrack] = useState<string>(activeTrackId || 'spa');
   const [currentSetup, setCurrentSetup] = useState<DriverSetupValues>(DEFAULT_SETUP_PRESETS.balanced.values);
   const [activePresetKey, setActivePresetKey] = useState<string>('balanced');
@@ -84,16 +90,14 @@ export const F1SetupEngineerChat: React.FC<F1SetupEngineerChatProps> = ({
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
 
-  // Initial Step 1 greeting
+  // Initial natural greeting
   const getGreetingMessage = (): ChatMessage => ({
-    id: 'welcome-step1',
+    id: 'welcome-natural',
     sender: 'engineer',
     text: isTr
-      ? '📻 **F1 Canlı Telsiz & Telemetri Hattı Bağlandı.**\n\nMerhaba! Ben F1 Baş Yarış & Setup Mühendisin.\n\n🏎️ **Adım 1 (Tam 6 Kategori Setup Girişi):** Lütfen mevcut araç ayarlarınızı (Aerodinamik, Şanzıman, Geometri, Süspansiyon, Frenler, Lastikler) girin, espor şablonlarından seçin veya metin olarak yapıştırın:'
-      : '📻 **F1 Pit Wall Live Telemetry Connected.**\n\nHello driver! I am your Senior Race & Setup Engineer.\n\n🏎️ **Step 1 (Complete 6-Category Setup Input):** Please configure your car parameters (Aerodynamics, Transmission, Geometry, Suspension, Brakes, Tyres), pick an esports baseline preset, or paste raw setup values:',
+      ? `📻 **F1 Pit Wall Canlı Telsiz Hattı Bağlandı.**\n\nSelam sürücüm! Ben F1 Baş Yarış & Setup Mühendisin. ${activeGameId === 'f1_24' ? '2024 Zemin Etkisi' : activeGameId === 'f1_26' ? '2026 Aktif Aerodinamik' : '2025 FIA'} regülasyonlarında pistteki araç dengesini birlikte yöneteceğiz.\n\nBana virajlarda ne hissettiğini doğal bir dille söyle (örn: *"Spa'da Pouhon çıkışında arka tekerlekler aniden kopuyor"* veya *"Monza için 24-19 kanat kullanıyorum, şikan girişinde ne yapmalıyım?"*). İstersen sağdaki **'Araç Telemetrisi'** panelinden setup değerlerini inceleyip anında güncelleyebilirsin.`
+      : `📻 **F1 Pit Wall Radio Intercom Connected.**\n\nRadio check driver! I am your Senior Race & Setup Engineer. I'm connected to your live car telemetry under ${activeGameId === 'f1_24' ? '2024 Ground Effect' : activeGameId === 'f1_26' ? '2026 Active Aero' : '2025 FIA'} regulations.\n\nDescribe your handling balance naturally (e.g. *"The car snaps on exit out of Turn 4 at Silverstone"* or *"Running 36-32 wings at Spa, need more straight-line speed"*). You can also tweak your active 6-category setup in the **'Car Telemetry'** drawer anytime.`,
     timestamp: isTr ? 'Şimdi' : 'Now',
-    step: 1,
-    selectedTrack: activeTrackId,
     setupSnapshot: currentSetup,
   });
 
@@ -102,22 +106,19 @@ export const F1SetupEngineerChat: React.FC<F1SetupEngineerChatProps> = ({
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Re-sync messages when language changes
+  // Synchronize when parent active track changes
   useEffect(() => {
-    setMessages((prev) => {
-      if (prev.length === 1 && prev[0].step === 1) {
-        return [getGreetingMessage()];
-      }
-      return prev;
-    });
-  }, [language]);
+    if (activeTrackId && activeTrackId !== selectedTrack) {
+      setSelectedTrack(activeTrackId);
+    }
+  }, [activeTrackId]);
 
   // Auto-scroll on new message
   useEffect(() => {
     if (isOpen) {
       chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, isOpen, isTyping, currentStep]);
+  }, [messages, isOpen, isTyping]);
 
   // Apply preset
   const handleApplyPreset = (presetKey: string) => {
@@ -125,6 +126,8 @@ export const F1SetupEngineerChat: React.FC<F1SetupEngineerChatProps> = ({
     if (preset) {
       setActivePresetKey(presetKey);
       setCurrentSetup({ ...preset.values });
+      setAppliedNotification(presetKey);
+      setTimeout(() => setAppliedNotification(null), 2500);
     }
   };
 
@@ -143,1079 +146,991 @@ export const F1SetupEngineerChat: React.FC<F1SetupEngineerChatProps> = ({
     setCurrentSetup(parsed);
     setPasteMode(false);
     setPastedSetupText('');
+    setAppliedNotification('pasted');
+    setTimeout(() => setAppliedNotification(null), 2500);
   };
 
-  // Confirm Step 1: Proceed to Step 2 (Issue Input)
-  const handleConfirmSetupStep1 = () => {
-    setCurrentStep(2);
+  // Apply single or all suggested adjustments to current setup
+  const handleApplyAdjustments = (adjs: SetupAdjustment[]) => {
+    setCurrentSetup((prev) => {
+      const updated = { ...prev };
+      adjs.forEach((a) => {
+        const pLower = a.parameter.toLowerCase();
+        const numVal = typeof a.recommendedValue === 'number' ? a.recommendedValue : parseFloat(String(a.recommendedValue));
 
-    const userSummaryText = isTr
-      ? `📋 **Kullanılan F1 Setup Değerleri (6 Kategori):**
-• **Aerodinamik:** Ön Kanat: ${currentSetup.frontWing} | Arka Kanat: ${currentSetup.rearWing}
-• **Transmisyon:** On-Throttle Diff: %${currentSetup.diffOnThrottle} | Off-Throttle Diff: %${currentSetup.diffOffThrottle} | Motor Freni: %${currentSetup.engineBraking}
-• **Süspansiyon Geometrisi:** Ön Kamber: ${currentSetup.frontCamber}° | Arka Kamber: ${currentSetup.rearCamber}° | Ön Toe-Out: ${currentSetup.frontToe}° | Arka Toe-In: ${currentSetup.rearToe}°
-• **Süspansiyon:** Ön/Arka Yay: ${currentSetup.frontSuspension}/${currentSetup.rearSuspension} | Ön/Arka ARB: ${currentSetup.frontARB}/${currentSetup.rearARB} | Taban: ${currentSetup.frontRideHeight}/${currentSetup.rearRideHeight}
-• **Frenler:** Basınç: %${currentSetup.brakePressure} | Denge: %${currentSetup.brakeBias}
-• **Lastikler:** Ön: ${currentSetup.frontTyrePressure} PSI | Arka: ${currentSetup.rearTyrePressure} PSI`
-      : `📋 **F1 Setup Parameter Telemetry (6 Categories):**
-• **Aerodynamics:** Front Wing: ${currentSetup.frontWing} | Rear Wing: ${currentSetup.rearWing}
-• **Transmission:** On-Throttle Diff: ${currentSetup.diffOnThrottle}% | Off-Throttle Diff: ${currentSetup.diffOffThrottle}% | Engine Braking: ${currentSetup.engineBraking}%
-• **Suspension Geometry:** Front Camber: ${currentSetup.frontCamber}° | Rear Camber: ${currentSetup.rearCamber}° | Front Toe-Out: ${currentSetup.frontToe}° | Rear Toe-In: ${currentSetup.rearToe}°
-• **Suspension:** Springs (F/R): ${currentSetup.frontSuspension}/${currentSetup.rearSuspension} | ARBs (F/R): ${currentSetup.frontARB}/${currentSetup.rearARB} | Ride: ${currentSetup.frontRideHeight}/${currentSetup.rearRideHeight}
-• **Brakes:** Pressure: ${currentSetup.brakePressure}% | Front Bias: ${currentSetup.brakeBias}%
-• **Tyres:** Front Pressure: ${currentSetup.frontTyrePressure} PSI | Rear Pressure: ${currentSetup.rearTyrePressure} PSI`;
+        if (!isNaN(numVal)) {
+          // 1. Aerodynamics
+          if (pLower.includes('front wing') || pLower.includes('ön kanat')) updated.frontWing = numVal;
+          else if (pLower.includes('rear wing') || pLower.includes('arka kanat')) updated.rearWing = numVal;
+          // 2. Transmission
+          else if (pLower.includes('on-throttle') || pLower.includes('on throttle') || pLower.includes('gaza basarken')) updated.diffOnThrottle = numVal;
+          else if (pLower.includes('off-throttle') || pLower.includes('off throttle') || pLower.includes('gaz keserken')) updated.diffOffThrottle = numVal;
+          // 3. Suspension Geometry
+          else if (pLower.includes('front camber') || pLower.includes('ön kamber')) updated.frontCamber = numVal;
+          else if (pLower.includes('rear camber') || pLower.includes('arka kamber')) updated.rearCamber = numVal;
+          else if (pLower.includes('front toe') || pLower.includes('ön toe')) updated.frontToe = numVal;
+          else if (pLower.includes('rear toe') || pLower.includes('arka toe')) updated.rearToe = numVal;
+          // 4. Suspension
+          else if (pLower.includes('front suspension') || pLower.includes('ön süspansiyon') || pLower.includes('front spring')) updated.frontSuspension = numVal;
+          else if (pLower.includes('rear suspension') || pLower.includes('arka süspansiyon') || pLower.includes('rear spring')) updated.rearSuspension = numVal;
+          else if (pLower.includes('rear arb') || pLower.includes('arka arb') || pLower.includes('arka viraj demiri') || pLower.includes('rear anti-roll')) updated.rearARB = numVal;
+          else if (pLower.includes('front arb') || pLower.includes('ön arb') || pLower.includes('ön viraj demiri') || pLower.includes('front anti-roll')) updated.frontARB = numVal;
+          else if (pLower.includes('front ride') || pLower.includes('ön sürüş') || pLower.includes('ön taban')) updated.frontRideHeight = numVal;
+          else if (pLower.includes('rear ride') || pLower.includes('arka sürüş') || pLower.includes('arka taban')) updated.rearRideHeight = numVal;
+          // 5. Brakes
+          else if (pLower.includes('bias') || pLower.includes('fren dengesi')) updated.brakeBias = numVal;
+          else if (pLower.includes('brake pressure') || pLower.includes('fren basınç')) updated.brakePressure = numVal;
+          // 6. Tyres (4 individual corners)
+          else if (pLower.includes('front left') || pLower.includes('ön sol') || pLower.includes('fl tyre') || pLower.includes('fl pressure')) {
+            updated.flTyrePressure = numVal;
+          } else if (pLower.includes('front right') || pLower.includes('ön sağ') || pLower.includes('fr tyre') || pLower.includes('fr pressure')) {
+            updated.frTyrePressure = numVal;
+          } else if (pLower.includes('rear left') || pLower.includes('arka sol') || pLower.includes('rl tyre') || pLower.includes('rl pressure')) {
+            updated.rlTyrePressure = numVal;
+          } else if (pLower.includes('rear right') || pLower.includes('arka sağ') || pLower.includes('rr tyre') || pLower.includes('rr pressure')) {
+            updated.rrTyrePressure = numVal;
+          } else if (pLower.includes('front tyre') || pLower.includes('front tire') || pLower.includes('ön lastik') || pLower.includes('fl & fr')) {
+            updated.flTyrePressure = numVal;
+            updated.frTyrePressure = numVal;
+          } else if (pLower.includes('rear tyre') || pLower.includes('rear tire') || pLower.includes('arka lastik') || pLower.includes('rl & rr')) {
+            updated.rlTyrePressure = numVal;
+            updated.rrTyrePressure = numVal;
+          }
+        }
+      });
+      return updated;
+    });
 
-    const userMsg: ChatMessage = {
-      id: `user-${Date.now()}`,
-      sender: 'user',
-      text: userSummaryText,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      setupSnapshot: { ...currentSetup },
-    };
-
-    setMessages((prev) => [...prev, userMsg]);
-    setIsTyping(true);
-
-    setTimeout(() => {
-      setIsTyping(false);
-      const engMsg: ChatMessage = {
-        id: `eng-${Date.now()}`,
-        sender: 'engineer',
-        text: isTr
-          ? `Tüm 6 kategorideki setup telemetriniz kaydedildi ve yarış analiz motoruna işlendi.\n\n⚠️ **Adım 2 (Sorun Girişi):** Pistte tam olarak hangi sürüş veya denge problemini yaşıyorsunuz? (Örn: 'Düzlük hızım az', 'Viraj çıkışında arkası kopuyor', 'Yavaş virajlarda kafadan kayıyor')`
-          : `All 6 categories mapped into the race engineering telemetry model.\n\n⚠️ **Step 2 (Issue Input):** What specific handling problem or issue are you experiencing on track? (e.g., 'Low top speed / excessive drag', 'Rear snapping out on corner exit', 'Turn-in understeer')`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        step: 2,
-        selectedTrack: selectedTrack,
-        setupSnapshot: { ...currentSetup },
-      };
-      setMessages((prev) => [...prev, engMsg]);
-    }, 500);
+    setAppliedNotification('applied_tweaks');
+    setTimeout(() => setAppliedNotification(null), 2500);
   };
 
-  // Step 2 -> Step 3: Handle Selected Issue or Custom Input
-  const handleSelectIssue = (issueId: string, issueLabel: string) => {
-    setCurrentStep(3);
-
-    const userMsg: ChatMessage = {
-      id: `user-${Date.now()}`,
-      sender: 'user',
-      text: `⚠️ **${isTr ? 'Bildirilen Sorun' : 'Reported Issue'}:** ${issueLabel}`,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
-
-    setMessages((prev) => [...prev, userMsg]);
-    setIsTyping(true);
-
-    setTimeout(() => {
-      setIsTyping(false);
-      const diagnosis = diagnoseHandlingIssueWithSetup(issueId, currentSetup, selectedTrack, language);
-
-      const engMsg: ChatMessage = {
-        id: `eng-${Date.now()}`,
-        sender: 'engineer',
-        text: isTr
-          ? `🔧 **Adım 3 (Detaylı Analiz & Hassas Değer Değişimleri):** Girdiğiniz 6 kategorideki setup sayıları ve yaşadığınız problem analiz edildi. İşte yapılması gereken net tık/sayı değişimleri:`
-          : `🔧 **Step 3 (Detailed Analysis & Incremental Tweaks):** Telemetry evaluated against your complete 6-category setup. Here are the exact click-by-click adjustments:`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        step: 3,
-        diagnosis: diagnosis,
-        selectedTrack: selectedTrack,
-        setupSnapshot: { ...currentSetup },
-      };
-      setMessages((prev) => [...prev, engMsg]);
-    }, 600);
+  // Copy adjustments to clipboard
+  const handleCopyAdjustments = (adjs: SetupAdjustment[], msgId: string) => {
+    const textToCopy = adjs
+      .map((a) => `[${a.category}] ${a.parameter}: ${a.currentValue} -> ${a.recommendedValue} (${a.changeDelta}) | ${a.adjustment}`)
+      .join('\n');
+    navigator.clipboard.writeText(textToCopy);
+    setCopiedId(msgId);
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
-  // Handle Free-Form Text from Input Bar (can be issue or setup)
-  const handleSendMessage = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!inputText.trim()) return;
+  // Reset conversation
+  const handleResetChat = () => {
+    setMessages([getGreetingMessage()]);
+  };
 
-    const query = inputText.trim();
-    setInputText('');
+  // Natural Send Message Handler (Interacts with /api/engineer/chat)
+  const handleSendMessage = async (customQuery?: string) => {
+    const query = (customQuery || inputText).trim();
+    if (!query || isTyping) return;
 
-    if (currentStep === 1) {
-      // User typed setup numbers or issue
-      const parsed = parseSetupFromText(query, currentSetup);
-      setCurrentSetup(parsed);
-      handleConfirmSetupStep1();
-      return;
+    if (!customQuery) setInputText('');
+
+    // Check if query contains raw setup telemetry text (e.g. wings 36-32, diff 55)
+    const newlyParsed = parseSetupFromText(query, currentSetup);
+    if (JSON.stringify(newlyParsed) !== JSON.stringify(currentSetup)) {
+      setCurrentSetup(newlyParsed);
     }
 
-    setCurrentStep(3);
-
-    const userMsg: ChatMessage = {
+    const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
       sender: 'user',
       text: query,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      setupSnapshot: { ...newlyParsed },
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    setMessages((prev) => [...prev, userMessage]);
     setIsTyping(true);
 
-    setTimeout(() => {
-      setIsTyping(false);
-      const diagnosis = diagnoseHandlingIssueWithSetup(query, currentSetup, selectedTrack, language);
-      const engMsg: ChatMessage = {
+    try {
+      const historyForApi = messages.map((m) => ({
+        role: m.sender === 'user' ? 'user' : 'model',
+        content: m.text,
+      }));
+
+      const res = await fetch('/api/engineer/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: historyForApi,
+          userQuery: query,
+          currentSetup: newlyParsed,
+          trackId: selectedTrack,
+          gameId: activeGameId,
+          language: isTr ? 'tr' : 'en',
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          const engineerMsg: ChatMessage = {
+            id: `eng-${Date.now()}`,
+            sender: 'engineer',
+            text: data.reply,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            adjustments: data.adjustments && data.adjustments.length > 0 ? data.adjustments : undefined,
+            source: data.source,
+            setupSnapshot: data.parsedSetup || newlyParsed,
+            telemetryTip: data.telemetryTip,
+          };
+
+          if (data.parsedSetup) {
+            setCurrentSetup(data.parsedSetup);
+          }
+
+          setMessages((prev) => [...prev, engineerMsg]);
+          setIsTyping(false);
+          return;
+        }
+      }
+      throw new Error('API route returned error');
+    } catch (err) {
+      console.warn('Network or server error in engineer chat, using client physics fallback:', err);
+      // Client-side fallback dynamic response
+      const diag = diagnoseHandlingIssueWithSetup(query, newlyParsed, selectedTrack, language);
+
+      const trackObj = TRACKS[selectedTrack];
+      const trackName = trackObj ? trackObj.name : selectedTrack.toUpperCase();
+
+      const fallbackText = isTr
+        ? `📻 **Pit Wall Telsizi — Telemetri Alındı:**\n\n` +
+          `"Telsiz anlaşıldı sürücüm. **${trackName}** telemetrisi ve bildirdiğiniz *'${query}'* durumu incelendi.\n\n` +
+          `🔍 **Mühendislik Değerlendirmesi:**\n` +
+          `Mevcut setup telemetrinizde ön/arka kanat **${newlyParsed.frontWing}/${newlyParsed.rearWing}**, diferansiyel **%${newlyParsed.diffOnThrottle} on / %${newlyParsed.diffOffThrottle} off**, yay sertlikleri **${newlyParsed.frontSuspension}/${newlyParsed.rearSuspension}** ve taban yüksekliği **${newlyParsed.frontRideHeight}/${newlyParsed.rearRideHeight}**.\n\n` +
+          `${diag.problemAnalysis}\n\n` +
+          `🎯 **Önerilen Hassas Tık / Sayı Değişimleri:**\n` +
+          diag.adjustments
+            .map(
+              (a) =>
+                `• **[${a.category}] ${a.parameter}:** ${a.currentValue} ➔ **${a.recommendedValue}** (${a.changeDelta})\n  _${a.adjustment} — ${a.impact}_`
+            )
+            .join('\n\n') +
+          `\n\n💡 **Sürüş Notu:** ${diag.telemetryTip}`
+        : `📻 **Pit Wall Radio — Telemetry Checked:**\n\n` +
+          `"Copy that driver. Telemetry reviewed for **${trackName}** against your feedback *'${query}'*.\n\n` +
+          `🔍 **Mechanical & Aero Analysis:**\n` +
+          `Your wings are at **${newlyParsed.frontWing}/${newlyParsed.rearWing}**, diff at **${newlyParsed.diffOnThrottle}% on / ${newlyParsed.diffOffThrottle}% off**, springs at **${newlyParsed.frontSuspension}/${newlyParsed.rearSuspension}**, and ride at **${newlyParsed.frontRideHeight}/${newlyParsed.rearRideHeight}**.\n\n` +
+          `${diag.problemAnalysis}\n\n` +
+          `🎯 **Target Click Adjustments:**\n` +
+          diag.adjustments
+            .map(
+              (a) =>
+                `• **[${a.category}] ${a.parameter}:** ${a.currentValue} ➔ **${a.recommendedValue}** (${a.changeDelta})\n  _${a.adjustment} — ${a.impact}_`
+            )
+            .join('\n\n') +
+          `\n\n💡 **Track Tip:** ${diag.telemetryTip}`;
+
+      const engineerMsg: ChatMessage = {
         id: `eng-${Date.now()}`,
         sender: 'engineer',
-        text: isTr
-          ? `🔧 **Adım 3 (Detaylı Analiz & Değer Değişimleri):** "${query}" sorununuz 6 kategorideki mevcut setup değerlerinize göre simüle edildi. Önerilen net değişimler:`
-          : `🔧 **Step 3 (Detailed Analysis & Exact Tweaks):** Analyzed "${query}" against your exact 6-category setup numbers. Here are the precise parameter changes:`,
+        text: fallbackText,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        step: 3,
-        diagnosis: diagnosis,
-        selectedTrack: selectedTrack,
-        setupSnapshot: { ...currentSetup },
+        adjustments: diag.adjustments,
+        source: 'telemetry_engine',
+        setupSnapshot: newlyParsed,
+        telemetryTip: diag.telemetryTip,
       };
-      setMessages((prev) => [...prev, engMsg]);
-    }, 600);
+
+      setMessages((prev) => [...prev, engineerMsg]);
+      setIsTyping(false);
+    }
   };
 
-  // Reset conversation to Step 1
-  const handleReset = () => {
-    setCurrentStep(1);
-    setCategoryTab('all');
-    setMessages([getGreetingMessage()]);
-  };
-
-  // Copy diagnosis with exact numbers
-  const handleCopySetup = (id: string, diagnosis: DiagnosisResult) => {
-    const textToCopy =
-      `=== ${diagnosis.title} ===\n${diagnosis.summary}\n\n` +
-      `${isTr ? 'ÖNERİLEN NET SAYISAL DEĞİŞİMLER (6 KATEGORİ):' : 'EXACT NUMERICAL ADJUSTMENTS (6 CATEGORIES):'}\n` +
-      diagnosis.adjustments
-        .map(
-          (a) =>
-            `• [${a.category}] ${a.parameter}: ${a.currentValue} -> ${a.recommendedValue} (${a.changeDelta})\n   ${isTr ? 'Ayar' : 'Action'}: ${a.adjustment}\n   ${isTr ? 'Etki' : 'Impact'}: ${a.impact}`
-        )
-        .join('\n\n') +
-      `\n\n💡 ${isTr ? 'Telemetri Sürüş Tavsiyesi' : 'Telemetry Driving Tip'}: ${diagnosis.telemetryTip}`;
-
-    navigator.clipboard.writeText(textToCopy);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2500);
-  };
-
-  const currentTrackObj = TRACKS[selectedTrack] || Object.values(TRACKS)[0];
-  const handlingIssues = getCommonHandlingIssues(language);
+  const commonIssues = getCommonHandlingIssues(language);
+  const trackObj = TRACKS[selectedTrack];
 
   return (
     <>
-      {/* Floating Toggle Button (Bottom-Left launcher) */}
-      <div className="fixed bottom-4 left-4 z-40 flex items-center gap-2 select-none">
+      {/* Floating Intercom Launcher Button (Bottom-Left) */}
+      <div className="fixed bottom-5 left-5 z-40">
         <motion.button
-          id="f1-engineer-chat-trigger"
-          whileHover={{ scale: 1.04 }}
-          whileTap={{ scale: 0.96 }}
+          type="button"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           onClick={() => {
             setIsOpen(!isOpen);
             setHasUnread(false);
           }}
-          className={`flex items-center gap-2.5 px-3.5 sm:px-4 py-2.5 rounded-2xl shadow-xl font-bold text-xs sm:text-sm border transition-all cursor-pointer backdrop-blur-md ${
+          className={`flex items-center gap-2.5 px-4 py-3 rounded-full shadow-2xl transition-all border cursor-pointer ${
             isOpen
-              ? 'bg-gradient-to-r from-red-600 to-red-700 text-white border-red-500 shadow-red-600/30 ring-2 ring-red-500/30'
-              : 'bg-slate-900/90 hover:bg-slate-800 text-slate-100 border-slate-700/80 shadow-black/50 hover:border-red-500/60'
+              ? 'bg-slate-900 text-white border-red-500/50 ring-2 ring-red-500/30'
+              : 'bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white border-red-400/40 shadow-red-600/30 hover:shadow-red-600/50'
           }`}
+          title={isTr ? 'F1 AI Yarış Mühendisi' : 'F1 AI Race Engineer'}
         >
           <div className="relative">
-            <Radio className={`w-4 h-4 sm:w-5 sm:h-5 ${isOpen ? 'animate-pulse text-white' : 'text-red-400'}`} />
-            {hasUnread && !isOpen && (
-              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-slate-950 animate-ping" />
-            )}
+            <Radio className="w-5 h-5 animate-pulse" />
+            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full ring-2 ring-slate-950 animate-ping" />
+            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full ring-2 ring-slate-950" />
           </div>
-          <div className="flex flex-col items-start leading-tight">
-            <span className="flex items-center gap-1.5 font-extrabold tracking-wide">
-              <span>{isTr ? 'AI Setup Mühendisi' : 'AI Setup Engineer'}</span>
-              <span className="text-[9px] uppercase px-1.5 py-0.2 bg-red-600/30 text-red-300 rounded-md border border-red-500/40">
-                LIVE
-              </span>
-            </span>
-            <span className="text-[10px] text-slate-400 font-normal hidden sm:inline">
-              {isTr ? '6-Kategori Telemetri & Teşhis' : '6-Category Telemetry & Diagnostics'}
-            </span>
+
+          <div className="text-left leading-tight hidden sm:block">
+            <div className="text-[10px] font-black uppercase tracking-widest text-red-100 flex items-center gap-1">
+              <span>PIT WALL INTERCOM</span>
+            </div>
+            <div className="text-xs font-black tracking-tight">
+              {isTr ? 'AI Setup Mühendisi' : 'AI Setup Engineer'}
+            </div>
           </div>
+
+          {hasUnread && !isOpen && (
+            <span className="px-1.5 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black uppercase">
+              LIVE
+            </span>
+          )}
         </motion.button>
       </div>
 
-      {/* Main Chat Drawer / Modal */}
+      {/* Main Conversational Pit Wall Intercom Window */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            id="f1-engineer-chat-window"
             initial={{ opacity: 0, y: 30, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.96 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className={`fixed z-50 flex flex-col bg-slate-950/95 backdrop-blur-xl border border-slate-800 shadow-2xl overflow-hidden rounded-2xl ${
+            exit={{ opacity: 0, y: 30, scale: 0.96 }}
+            transition={{ duration: 0.2 }}
+            className={`fixed z-50 bg-slate-950/95 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-100 font-sans ${
               isExpanded
-                ? 'inset-2 sm:inset-6 md:inset-10'
-                : 'bottom-20 left-2 right-2 sm:left-4 sm:right-auto sm:w-[560px] md:w-[620px] max-h-[85vh] sm:h-[680px]'
+                ? 'inset-4 sm:inset-10'
+                : 'bottom-20 left-4 right-4 sm:right-auto sm:left-6 sm:w-[580px] md:w-[640px] h-[640px] max-h-[88vh]'
             }`}
           >
-            {/* Header */}
-            <div className="p-3.5 sm:p-4 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b border-slate-800 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-red-600/20 border border-red-500/40 flex items-center justify-center text-red-400 shadow-inner">
-                  <Radio className="w-4 h-4 animate-pulse" />
+            {/* Header: Radio Bar & Circuit Selector */}
+            <div className="px-4 py-3 bg-gradient-to-r from-slate-900 via-slate-900/90 to-slate-950 border-b border-slate-800/80 flex items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-400 shrink-0">
+                  <Radio className="w-4 h-4 text-red-500 animate-pulse" />
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-extrabold text-sm sm:text-base text-slate-100 flex items-center gap-1.5">
-                      <span>{isTr ? 'AI Setup & Yarış Mühendisi' : 'AI Setup & Race Engineer'}</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-300 font-bold border border-red-500/30">
-                        {currentTrackObj.name.split('(')[0].trim()}
-                      </span>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <h3 className="text-xs sm:text-sm font-black text-white tracking-tight flex items-center gap-1.5">
+                      <span>F1 AI Race Engineer</span>
                     </h3>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20 font-bold uppercase">
+                      {activeGameId === 'f1_24' ? 'F1 24' : activeGameId === 'f1_26' ? 'F1 26' : 'F1 25'}
+                    </span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono font-bold flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      PIT RADIO LIVE
+                    </span>
                   </div>
-                  <p className="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>{isTr ? 'F1 24/25 Telemetri Simülatörü' : 'F1 24/25 Live Telemetry Engine'}</span>
-                  </p>
+
+                  {/* Circuit selector */}
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-400 mt-0.5 truncate">
+                    <TrackFlagIcon
+                      trackId={selectedTrack}
+                      countryOrTrackName={trackObj?.country}
+                      size="sm"
+                    />
+                    <select
+                      value={selectedTrack}
+                      onChange={(e) => {
+                        setSelectedTrack(e.target.value);
+                        if (onFilterMarketplace) onFilterMarketplace(e.target.value, activeGameId);
+                      }}
+                      className="bg-transparent border-0 text-slate-200 text-xs font-bold focus:outline-none cursor-pointer py-0 px-1 hover:text-white"
+                    >
+                      {Object.values(TRACKS).map((t) => (
+                        <option key={t.id} value={t.id} className="bg-slate-900 text-white">
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
 
-              {/* Action Controls */}
-              <div className="flex items-center gap-1">
+              {/* Action Buttons: Telemetry Drawer, Expand, Clear, Close */}
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   type="button"
-                  title={isTr ? 'Sıfırla' : 'Reset'}
-                  onClick={handleReset}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/80 transition-colors cursor-pointer"
+                  onClick={() => setShowTelemetryDrawer(!showTelemetryDrawer)}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all border cursor-pointer ${
+                    showTelemetryDrawer
+                      ? 'bg-red-600 text-white border-red-500 shadow-sm'
+                      : 'bg-slate-900 text-slate-300 hover:text-white border-slate-700 hover:border-slate-600'
+                  }`}
+                  title={isTr ? 'Araç Telemetrisi ve Setup Ayarları' : 'Car Telemetry & Setup Parameters'}
                 >
-                  <RefreshCw className="w-4 h-4" />
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-sky-400" />
+                  <span className="hidden sm:inline">{isTr ? 'Araç Telemetrisi' : 'Telemetry'}</span>
+                  <span className="font-mono text-[10px] bg-slate-950/60 px-1 py-0.2 rounded">
+                    {currentSetup.frontWing}/{currentSetup.rearWing}
+                  </span>
                 </button>
+
                 <button
                   type="button"
-                  title={isExpanded ? (isTr ? 'Küçült' : 'Minimize') : isTr ? 'Büyüt' : 'Maximize'}
+                  onClick={handleResetChat}
+                  className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                  title={isTr ? 'Sohbeti Sıfırla' : 'Reset Chat'}
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => setIsExpanded(!isExpanded)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/80 transition-colors cursor-pointer hidden sm:flex"
+                  className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer hidden sm:block"
+                  title={isExpanded ? 'Küçült' : 'Genişlet'}
                 >
-                  {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                  {isExpanded ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
                 </button>
+
                 <button
                   type="button"
-                  title={isTr ? 'Kapat' : 'Close'}
                   onClick={() => setIsOpen(false)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800/80 transition-colors cursor-pointer"
+                  className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                  title="Kapat"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-            {/* Stepper Progress Bar */}
-            <div className="px-4 py-2 bg-slate-900/90 border-b border-slate-800/80 flex items-center justify-between text-xs shrink-0">
-              <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto scrollbar-none w-full justify-between">
-                <div
-                  onClick={() => setCurrentStep(1)}
-                  className={`flex items-center gap-1.5 cursor-pointer font-bold transition-colors ${
-                    currentStep === 1 ? 'text-red-400' : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <span
-                    className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
-                      currentStep === 1
-                        ? 'bg-red-500 text-white font-black'
-                        : 'bg-slate-800 text-slate-400 border border-slate-700'
-                    }`}
-                  >
-                    1
+            {/* Notification Toast */}
+            {appliedNotification && (
+              <div className="bg-emerald-500/20 border-b border-emerald-500/30 px-3 py-1.5 text-xs text-emerald-300 flex items-center justify-between font-bold animate-fadeIn">
+                <span className="flex items-center gap-1.5">
+                  <CheckCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>
+                    {appliedNotification === 'applied_tweaks'
+                      ? isTr
+                        ? 'Önerilen telemetri ayarları aktif aracınıza uygulandı!'
+                        : 'Suggested telemetry tweaks applied to active car!'
+                      : isTr
+                      ? 'Yeni setup telemetrisi aktif araca yüklendi.'
+                      : 'Setup telemetry loaded into active car.'}
                   </span>
-                  <span className="text-[11px] whitespace-nowrap">
-                    {isTr ? 'Adım 1: Setup Parametreleri' : 'Step 1: Setup Values'}
-                  </span>
-                </div>
-
-                <ChevronRight className="w-3 h-3 text-slate-600 shrink-0" />
-
-                <div
-                  onClick={() => currentStep > 1 && setCurrentStep(2)}
-                  className={`flex items-center gap-1.5 font-bold transition-colors ${
-                    currentStep === 2
-                      ? 'text-amber-400'
-                      : currentStep > 2
-                      ? 'text-slate-400 cursor-pointer hover:text-slate-200'
-                      : 'text-slate-600 cursor-not-allowed'
-                  }`}
-                >
-                  <span
-                    className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
-                      currentStep === 2
-                        ? 'bg-amber-500 text-slate-950 font-black'
-                        : 'bg-slate-800 text-slate-400 border border-slate-700'
-                    }`}
-                  >
-                    2
-                  </span>
-                  <span className="text-[11px] whitespace-nowrap">
-                    {isTr ? 'Adım 2: Sorun Bildirimi' : 'Step 2: Handling Issue'}
-                  </span>
-                </div>
-
-                <ChevronRight className="w-3 h-3 text-slate-600 shrink-0" />
-
-                <div
-                  className={`flex items-center gap-1.5 font-bold ${
-                    currentStep === 3 ? 'text-emerald-400' : 'text-slate-600'
-                  }`}
-                >
-                  <span
-                    className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
-                      currentStep === 3
-                        ? 'bg-emerald-500 text-slate-950 font-black'
-                        : 'bg-slate-800 text-slate-400 border border-slate-700'
-                    }`}
-                  >
-                    3
-                  </span>
-                  <span className="text-[11px] whitespace-nowrap">
-                    {isTr ? 'Adım 3: Telemetri Değişimleri' : 'Step 3: Setup Tweaks'}
-                  </span>
-                </div>
+                </span>
+                <span className="font-mono text-[10px] text-emerald-400/80">
+                  W:{currentSetup.frontWing}/{currentSetup.rearWing} | D:{currentSetup.diffOnThrottle}%
+                </span>
               </div>
-            </div>
+            )}
 
-            {/* Chat Messages Body */}
-            <div className="flex-1 overflow-y-auto p-3.5 sm:p-4 space-y-4 custom-scrollbar">
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex flex-col gap-1 ${
-                    msg.sender === 'user' ? 'items-end' : 'items-start'
-                  }`}
-                >
-                  <div
-                    className={`max-w-[95%] sm:max-w-[90%] rounded-2xl p-3 sm:p-3.5 shadow-md ${
-                      msg.sender === 'user'
-                        ? 'bg-gradient-to-r from-red-600 to-red-700 text-white font-medium text-xs sm:text-sm rounded-br-xs'
-                        : 'bg-slate-900/95 border border-slate-800 text-slate-200 text-xs sm:text-sm rounded-bl-xs'
-                    }`}
-                  >
-                    {/* Message Header if from Engineer */}
-                    {msg.sender === 'engineer' && (
-                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-red-400 mb-1.5 border-b border-slate-800 pb-1">
-                        <Radio className="w-3 h-3 animate-pulse" />
-                        <span>{isTr ? 'PIT WALL — TELSİZ & TELEMETRİ' : 'PIT WALL — LIVE TELEMETRY'}</span>
+            {/* Main Content: Chat Stream + Slide-out Telemetry Drawer */}
+            <div className="flex-1 relative flex overflow-hidden">
+              {/* Message Stream */}
+              <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3.5 scrollbar-thin">
+                {messages.map((msg) => {
+                  const isEng = msg.sender === 'engineer';
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`flex gap-2.5 ${isEng ? 'justify-start' : 'justify-end'}`}
+                    >
+                      {isEng && (
+                        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-red-600 to-rose-700 text-white flex items-center justify-center shrink-0 text-xs shadow-sm shadow-red-600/30 border border-red-500/30 font-black">
+                          AI
+                        </div>
+                      )}
+
+                      <div
+                        className={`max-w-[85%] sm:max-w-[78%] rounded-2xl p-3.5 text-xs shadow-md ${
+                          isEng
+                            ? 'bg-slate-900/90 text-slate-100 border border-slate-800'
+                            : 'bg-red-600 text-white ml-auto'
+                        }`}
+                      >
+                        {/* Header & Source tag */}
+                        <div className="flex items-center justify-between gap-2 text-[10px] text-slate-400 mb-1.5">
+                          <span className={`font-bold ${isEng ? 'text-red-400' : 'text-red-100'}`}>
+                            {isEng ? 'Chief Race Engineer' : 'Driver'}
+                          </span>
+                          <span className="text-[10px] text-slate-500 font-mono">{msg.timestamp}</span>
+                        </div>
+
+                        {/* Formatted Text */}
+                        <div className="whitespace-pre-line leading-relaxed break-words space-y-1">
+                          {msg.text}
+                        </div>
+
+                        {/* Structured Adjustments Card (If AI recommended parameter tweaks) */}
+                        {msg.adjustments && msg.adjustments.length > 0 && (
+                          <div className="mt-3 pt-2.5 border-t border-slate-800/80 space-y-2">
+                            <div className="flex items-center justify-between text-[11px] font-bold text-sky-400">
+                              <span className="flex items-center gap-1">
+                                <Sparkles className="w-3 h-3 text-sky-400" />
+                                <span>{isTr ? 'Önerilen Telemetri Değişimleri' : 'Suggested Telemetry Adjustments'}</span>
+                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyAdjustments(msg.adjustments!, msg.id)}
+                                  className="text-[10px] text-slate-400 hover:text-white px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-750 flex items-center gap-1 transition-colors cursor-pointer"
+                                >
+                                  {copiedId === msg.id ? (
+                                    <>
+                                      <Check className="w-2.5 h-2.5 text-emerald-400" />
+                                      <span>{isTr ? 'Kopyalandı' : 'Copied'}</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Copy className="w-2.5 h-2.5" />
+                                      <span>{isTr ? 'Kopyala' : 'Copy'}</span>
+                                    </>
+                                  )}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleApplyAdjustments(msg.adjustments!)}
+                                  className="text-[10px] text-slate-950 font-black px-2.5 py-0.5 rounded bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 flex items-center gap-1 shadow-sm transition-all cursor-pointer"
+                                >
+                                  <SlidersHorizontal className="w-2.5 h-2.5" />
+                                  <span>{isTr ? 'Araca Uygula' : 'Apply to Car'}</span>
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                              {msg.adjustments.map((adj, i) => (
+                                <div
+                                  key={i}
+                                  className="p-2 rounded-lg bg-slate-950/80 border border-slate-800 flex flex-col justify-between"
+                                >
+                                  <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1">
+                                    <span className="font-bold text-slate-300">{adj.parameter}</span>
+                                    <span className="px-1.5 py-0.2 rounded bg-slate-800 text-sky-400 font-mono font-bold text-[9px]">
+                                      {adj.category}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between font-mono font-bold text-xs my-0.5">
+                                    <span className="text-slate-400">{adj.currentValue}</span>
+                                    <ArrowRight className="w-3 h-3 text-slate-500" />
+                                    <span className="text-emerald-400">{adj.recommendedValue}</span>
+                                    <span className="text-[10px] text-amber-400 ml-1">({adj.changeDelta})</span>
+                                  </div>
+                                  <div className="text-[10px] text-slate-400 mt-1 leading-tight">
+                                    {adj.impact}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
+                  );
+                })}
 
-                    {/* Formatted Text */}
-                    <div className="whitespace-pre-wrap leading-relaxed">
-                      {msg.text}
+                {/* Typing Indicator */}
+                {isTyping && (
+                  <div className="flex items-center gap-2 text-xs text-slate-400 animate-pulse pl-9">
+                    <div className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+                    <span>{isTr ? 'Yarış mühendisi telemetriyi analiz ediyor...' : 'Race engineer analyzing telemetry...'}</span>
+                  </div>
+                )}
+
+                <div ref={chatEndRef} />
+              </div>
+
+              {/* Collapsible Telemetry & Setup Drawer (All 6 Categories) */}
+              <AnimatePresence>
+                {showTelemetryDrawer && (
+                  <motion.div
+                    initial={{ x: '100%', opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    exit={{ x: '100%', opacity: 0 }}
+                    transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                    className="absolute inset-y-0 right-0 w-full sm:w-[360px] bg-slate-950/98 border-l border-slate-800 flex flex-col z-20 shadow-2xl backdrop-blur-md"
+                  >
+                    {/* Drawer Header */}
+                    <div className="p-3 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <SlidersVertical className="w-4 h-4 text-red-500" />
+                        <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+                          {isTr ? 'Aktif Araç Telemetrisi (6 Kategori)' : 'Active Car Telemetry (6 Categories)'}
+                        </h4>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowTelemetryDrawer(false)}
+                        className="p-1 text-slate-400 hover:text-white rounded"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
 
-                    {/* STEP 1: INTERACTIVE 6-CATEGORY SETUP INPUT CARD */}
-                    {msg.step === 1 && currentStep === 1 && (
-                      <div className="mt-3.5 pt-3 border-t border-slate-800 space-y-3">
-                        {/* Track & Preset Selector Bar */}
-                        <div className="space-y-1.5">
-                          <div className="flex items-center justify-between text-[11px] font-bold text-slate-300">
-                            <span>{isTr ? '⚡ Espor Hazır Taban Şablonları:' : '⚡ Esports Baseline Presets:'}</span>
-                            <button
-                              type="button"
-                              onClick={() => setPasteMode(!pasteMode)}
-                              className="text-[10px] text-red-400 hover:text-red-300 font-bold underline cursor-pointer flex items-center gap-1"
-                            >
-                              <ClipboardPaste className="w-3 h-3" />
-                              <span>{pasteMode ? (isTr ? 'Forma Dön' : 'Switch to Sliders') : isTr ? 'Metin Yapıştır' : 'Paste Text'}</span>
-                            </button>
-                          </div>
+                    {/* Presets & Paste Switcher */}
+                    <div className="p-2.5 border-b border-slate-800/80 bg-slate-900/50 space-y-2">
+                      <div className="flex items-center justify-between text-[11px] text-slate-400">
+                        <span className="font-bold">{isTr ? 'Espor Şablonları:' : 'Esports Presets:'}</span>
+                        <button
+                          type="button"
+                          onClick={() => setPasteMode(!pasteMode)}
+                          className="text-[10px] text-sky-400 hover:text-sky-300 font-bold flex items-center gap-1 cursor-pointer"
+                        >
+                          <ClipboardPaste className="w-3 h-3" />
+                          <span>{pasteMode ? (isTr ? 'Sürgülere Dön' : 'Back to Sliders') : (isTr ? 'Metin Yapıştır' : 'Paste Setup')}</span>
+                        </button>
+                      </div>
 
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                            {Object.entries(DEFAULT_SETUP_PRESETS).map(([key, preset]) => (
+                      {!pasteMode && (
+                        <>
+                          <div className="grid grid-cols-2 gap-1.5">
+                            {Object.entries(DEFAULT_SETUP_PRESETS).map(([k, p]) => (
                               <button
-                                key={key}
+                                key={k}
                                 type="button"
-                                onClick={() => handleApplyPreset(key)}
-                                className={`px-2 py-1.5 rounded-xl border text-[10px] font-bold text-left transition-all cursor-pointer truncate ${
-                                  activePresetKey === key
-                                    ? 'bg-red-600/30 border-red-500 text-red-200 shadow-xs ring-1 ring-red-500/40'
-                                    : 'bg-slate-900 border-slate-800 hover:border-slate-700 text-slate-300'
+                                onClick={() => handleApplyPreset(k)}
+                                className={`px-2 py-1.5 rounded-lg text-[10px] font-bold text-left truncate transition-colors border cursor-pointer ${
+                                  activePresetKey === k
+                                    ? 'bg-red-600 text-white border-red-500 shadow-sm'
+                                    : 'bg-slate-900 text-slate-300 hover:text-white border-slate-800'
                                 }`}
                               >
-                                {isTr ? preset.labelTr : preset.labelEn}
+                                {isTr ? p.labelTr : p.labelEn}
                               </button>
                             ))}
                           </div>
-                        </div>
 
-                        {/* Paste Box Mode */}
-                        {pasteMode ? (
-                          <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-700/80 space-y-2.5">
-                            <label className="text-[10px] font-bold text-slate-300 block">
-                              {isTr
-                                ? 'Setup Metnini veya Rakamlarını Yapıştırın (Tüm 6 Kategori Desteklenir):'
-                                : 'Paste Setup Text or Numbers (All 6 Categories Supported):'}
-                            </label>
-                            <textarea
-                              rows={3}
-                              value={pastedSetupText}
-                              onChange={(e) => setPastedSetupText(e.target.value)}
-                              placeholder={
-                                isTr
-                                  ? 'Örn: Kanat: 36-32, Diff: %58-%52, Motor Freni: %60, Kamber: -2.50/-1.00, Toe: 0.00/0.10, Yay: 30-22, ARB: 8-5, Taban: 35-40, Fren: %100-%55, Lastik: 22.5-20.5 PSI'
-                                  : 'e.g. Wings: 36-32, Diff: 58%-52%, Engine Braking: 60%, Camber: -2.50/-1.00, Toe: 0.00/0.10, Springs: 30-22, ARB: 8-5, Ride: 35-40, Brakes: 100%-55%, Tyres: 22.5-20.5 PSI'
-                              }
-                              className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-hidden focus:border-red-500 font-mono"
-                            />
-                            <button
-                              type="button"
-                              onClick={handleParsePastedSetup}
-                              className="w-full py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold text-xs cursor-pointer transition-all flex items-center justify-center gap-1.5"
-                            >
-                              <Check className="w-3.5 h-3.5" />
-                              <span>{isTr ? 'Değerleri Çözümle ve Uygula' : 'Parse & Apply Values'}</span>
-                            </button>
-                          </div>
-                        ) : (
-                          /* Interactive Categorized Steppers / Sliders Grid */
-                          <div className="space-y-2.5">
-                            {/* Category Filter Tabs */}
-                            <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none border-b border-slate-800/80">
-                              {[
-                                { id: 'all', labelTr: '🌟 Tümü (6)', labelEn: '🌟 All (6)' },
-                                { id: 'aero', labelTr: '🌪️ Aerodinamik', labelEn: '🌪️ Aero' },
-                                { id: 'transmission', labelTr: '⚙️ Şanzıman', labelEn: '⚙️ Transmission' },
-                                { id: 'geometry', labelTr: '📐 Geometri', labelEn: '📐 Geometry' },
-                                { id: 'suspension', labelTr: '🔄 Süspansiyon', labelEn: '🔄 Suspension' },
-                                { id: 'brakes', labelTr: '🎯 Frenler', labelEn: '🎯 Brakes' },
-                                { id: 'tyres', labelTr: '🏁 Lastikler', labelEn: '🏁 Tyres' },
-                              ].map((tab) => (
-                                <button
-                                  key={tab.id}
-                                  type="button"
-                                  onClick={() => setCategoryTab(tab.id as SetupCategoryTab)}
-                                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all cursor-pointer ${
-                                    categoryTab === tab.id
-                                      ? 'bg-red-600 text-white shadow-xs'
-                                      : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
-                                  }`}
-                                >
-                                  {isTr ? tab.labelTr : tab.labelEn}
-                                </button>
-                              ))}
-                            </div>
-
-                            {/* 1. AERODYNAMICS */}
-                            {(categoryTab === 'all' || categoryTab === 'aero') && (
-                              <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800/90 space-y-2">
-                                <div className="flex items-center justify-between text-[11px] font-bold text-sky-400">
-                                  <span className="flex items-center gap-1.5">
-                                    <span>🌪️</span>
-                                    <span>{isTr ? '1. Aerodinamik (0 - 50)' : '1. Aerodynamics (0 - 50)'}</span>
-                                  </span>
-                                  <span className="font-mono text-slate-200 text-xs font-bold">
-                                    {currentSetup.frontWing} - {currentSetup.rearWing}
-                                  </span>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                  <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 space-y-1">
-                                    <div className="flex justify-between text-[10px] text-slate-400">
-                                      <span>{isTr ? 'Ön Kanat:' : 'Front Wing:'}</span>
-                                      <span className="font-mono text-white font-bold">{currentSetup.frontWing}</span>
-                                    </div>
-                                    <input
-                                      type="range"
-                                      min={0}
-                                      max={50}
-                                      value={currentSetup.frontWing}
-                                      onChange={(e) => handleUpdateSetupField('frontWing', Number(e.target.value))}
-                                      className="w-full accent-sky-500 cursor-pointer h-1.5"
-                                    />
-                                  </div>
-                                  <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 space-y-1">
-                                    <div className="flex justify-between text-[10px] text-slate-400">
-                                      <span>{isTr ? 'Arka Kanat:' : 'Rear Wing:'}</span>
-                                      <span className="font-mono text-white font-bold">{currentSetup.rearWing}</span>
-                                    </div>
-                                    <input
-                                      type="range"
-                                      min={0}
-                                      max={50}
-                                      value={currentSetup.rearWing}
-                                      onChange={(e) => handleUpdateSetupField('rearWing', Number(e.target.value))}
-                                      className="w-full accent-sky-500 cursor-pointer h-1.5"
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* 2. TRANSMISSION / DIFFERENTIAL & ENGINE BRAKING */}
-                            {(categoryTab === 'all' || categoryTab === 'transmission') && (
-                              <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800/90 space-y-2">
-                                <div className="flex items-center justify-between text-[11px] font-bold text-amber-400">
-                                  <span className="flex items-center gap-1.5">
-                                    <span>⚙️</span>
-                                    <span>{isTr ? '2. Şanzıman & Transmisyon' : '2. Transmission & Differential'}</span>
-                                  </span>
-                                  <span className="font-mono text-slate-200 text-xs font-bold">
-                                    %{currentSetup.diffOnThrottle} / %{currentSetup.diffOffThrottle} | EB: %{currentSetup.engineBraking}
-                                  </span>
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                  <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 space-y-1">
-                                    <div className="flex justify-between text-[10px] text-slate-400">
-                                      <span>{isTr ? 'Gaza Basarken (%):' : 'Diff On-Throttle:'}</span>
-                                      <span className="font-mono text-amber-300 font-bold">%{currentSetup.diffOnThrottle}</span>
-                                    </div>
-                                    <input
-                                      type="range"
-                                      min={10}
-                                      max={100}
-                                      value={currentSetup.diffOnThrottle}
-                                      onChange={(e) => handleUpdateSetupField('diffOnThrottle', Number(e.target.value))}
-                                      className="w-full accent-amber-500 cursor-pointer h-1.5"
-                                    />
-                                  </div>
-                                  <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 space-y-1">
-                                    <div className="flex justify-between text-[10px] text-slate-400">
-                                      <span>{isTr ? 'Gaz Kesince (%):' : 'Diff Off-Throttle:'}</span>
-                                      <span className="font-mono text-amber-300 font-bold">%{currentSetup.diffOffThrottle}</span>
-                                    </div>
-                                    <input
-                                      type="range"
-                                      min={10}
-                                      max={100}
-                                      value={currentSetup.diffOffThrottle}
-                                      onChange={(e) => handleUpdateSetupField('diffOffThrottle', Number(e.target.value))}
-                                      className="w-full accent-amber-500 cursor-pointer h-1.5"
-                                    />
-                                  </div>
-                                  <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 space-y-1">
-                                    <div className="flex justify-between text-[10px] text-slate-400">
-                                      <span>{isTr ? 'Motor Freni (EB):' : 'Engine Braking:'}</span>
-                                      <span className="font-mono text-amber-300 font-bold">%{currentSetup.engineBraking}</span>
-                                    </div>
-                                    <input
-                                      type="range"
-                                      min={0}
-                                      max={100}
-                                      value={currentSetup.engineBraking}
-                                      onChange={(e) => handleUpdateSetupField('engineBraking', Number(e.target.value))}
-                                      className="w-full accent-amber-500 cursor-pointer h-1.5"
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* 3. SUSPENSION GEOMETRY (CAMBER & TOE) */}
-                            {(categoryTab === 'all' || categoryTab === 'geometry') && (
-                              <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800/90 space-y-2">
-                                <div className="flex items-center justify-between text-[11px] font-bold text-violet-400">
-                                  <span className="flex items-center gap-1.5">
-                                    <span>📐</span>
-                                    <span>{isTr ? '3. Süspansiyon Geometrisi (Kamber & Toe)' : '3. Suspension Geometry (Camber & Toe)'}</span>
-                                  </span>
-                                  <span className="font-mono text-slate-200 text-xs font-bold">
-                                    {currentSetup.frontCamber}° / {currentSetup.rearCamber}° | {currentSetup.frontToe}° / {currentSetup.rearToe}°
-                                  </span>
-                                </div>
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                  <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 space-y-1">
-                                    <div className="flex justify-between text-[10px] text-slate-400">
-                                      <span>{isTr ? 'Ön Kamber:' : 'Front Camber:'}</span>
-                                      <span className="font-mono text-violet-300 font-bold">{currentSetup.frontCamber}°</span>
-                                    </div>
-                                    <input
-                                      type="range"
-                                      min={-3.50}
-                                      max={-2.50}
-                                      step={0.05}
-                                      value={currentSetup.frontCamber}
-                                      onChange={(e) => handleUpdateSetupField('frontCamber', Number(e.target.value))}
-                                      className="w-full accent-violet-500 cursor-pointer h-1.5"
-                                    />
-                                  </div>
-                                  <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 space-y-1">
-                                    <div className="flex justify-between text-[10px] text-slate-400">
-                                      <span>{isTr ? 'Arka Kamber:' : 'Rear Camber:'}</span>
-                                      <span className="font-mono text-violet-300 font-bold">{currentSetup.rearCamber}°</span>
-                                    </div>
-                                    <input
-                                      type="range"
-                                      min={-2.20}
-                                      max={-0.70}
-                                      step={0.05}
-                                      value={currentSetup.rearCamber}
-                                      onChange={(e) => handleUpdateSetupField('rearCamber', Number(e.target.value))}
-                                      className="w-full accent-violet-500 cursor-pointer h-1.5"
-                                    />
-                                  </div>
-                                  <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 space-y-1">
-                                    <div className="flex justify-between text-[10px] text-slate-400">
-                                      <span>{isTr ? 'Ön Toe-Out:' : 'Front Toe-Out:'}</span>
-                                      <span className="font-mono text-violet-300 font-bold">{currentSetup.frontToe}°</span>
-                                    </div>
-                                    <input
-                                      type="range"
-                                      min={0.00}
-                                      max={0.50}
-                                      step={0.01}
-                                      value={currentSetup.frontToe}
-                                      onChange={(e) => handleUpdateSetupField('frontToe', Number(e.target.value))}
-                                      className="w-full accent-violet-500 cursor-pointer h-1.5"
-                                    />
-                                  </div>
-                                  <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 space-y-1">
-                                    <div className="flex justify-between text-[10px] text-slate-400">
-                                      <span>{isTr ? 'Arka Toe-In:' : 'Rear Toe-In:'}</span>
-                                      <span className="font-mono text-violet-300 font-bold">{currentSetup.rearToe}°</span>
-                                    </div>
-                                    <input
-                                      type="range"
-                                      min={0.00}
-                                      max={0.50}
-                                      step={0.01}
-                                      value={currentSetup.rearToe}
-                                      onChange={(e) => handleUpdateSetupField('rearToe', Number(e.target.value))}
-                                      className="w-full accent-violet-500 cursor-pointer h-1.5"
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* 4. SUSPENSION (SPRINGS, ARB & RIDE HEIGHT) */}
-                            {(categoryTab === 'all' || categoryTab === 'suspension') && (
-                              <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800/90 space-y-2">
-                                <div className="flex items-center justify-between text-[11px] font-bold text-emerald-400">
-                                  <span className="flex items-center gap-1.5">
-                                    <span>🔄</span>
-                                    <span>{isTr ? '4. Süspansiyon (Yaylar, ARB & Taban Yüksekliği)' : '4. Suspension (Springs, ARBs & Ride Height)'}</span>
-                                  </span>
-                                  <span className="font-mono text-slate-200 text-xs font-bold">
-                                    S:{currentSetup.frontSuspension}/{currentSetup.rearSuspension} | ARB:{currentSetup.frontARB}/{currentSetup.rearARB} | R:{currentSetup.frontRideHeight}/{currentSetup.rearRideHeight}
-                                  </span>
-                                </div>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                  {/* Front/Rear Springs */}
-                                  <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 space-y-1">
-                                    <div className="flex justify-between text-[10px] text-slate-400">
-                                      <span>{isTr ? 'Ön Süspansiyon:' : 'Front Suspension:'}</span>
-                                      <span className="font-mono text-emerald-300 font-bold">{currentSetup.frontSuspension}</span>
-                                    </div>
-                                    <input
-                                      type="range"
-                                      min={1}
-                                      max={41}
-                                      value={currentSetup.frontSuspension}
-                                      onChange={(e) => handleUpdateSetupField('frontSuspension', Number(e.target.value))}
-                                      className="w-full accent-emerald-500 cursor-pointer h-1.5"
-                                    />
-                                  </div>
-                                  <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 space-y-1">
-                                    <div className="flex justify-between text-[10px] text-slate-400">
-                                      <span>{isTr ? 'Arka Süspansiyon:' : 'Rear Suspension:'}</span>
-                                      <span className="font-mono text-emerald-300 font-bold">{currentSetup.rearSuspension}</span>
-                                    </div>
-                                    <input
-                                      type="range"
-                                      min={1}
-                                      max={41}
-                                      value={currentSetup.rearSuspension}
-                                      onChange={(e) => handleUpdateSetupField('rearSuspension', Number(e.target.value))}
-                                      className="w-full accent-emerald-500 cursor-pointer h-1.5"
-                                    />
-                                  </div>
-
-                                  {/* Front/Rear ARB */}
-                                  <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 space-y-1">
-                                    <div className="flex justify-between text-[10px] text-slate-400">
-                                      <span>{isTr ? 'Ön ARB:' : 'Front ARB:'}</span>
-                                      <span className="font-mono text-emerald-300 font-bold">{currentSetup.frontARB}</span>
-                                    </div>
-                                    <input
-                                      type="range"
-                                      min={1}
-                                      max={21}
-                                      value={currentSetup.frontARB}
-                                      onChange={(e) => handleUpdateSetupField('frontARB', Number(e.target.value))}
-                                      className="w-full accent-emerald-500 cursor-pointer h-1.5"
-                                    />
-                                  </div>
-                                  <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 space-y-1">
-                                    <div className="flex justify-between text-[10px] text-slate-400">
-                                      <span>{isTr ? 'Arka ARB:' : 'Rear ARB:'}</span>
-                                      <span className="font-mono text-emerald-300 font-bold">{currentSetup.rearARB}</span>
-                                    </div>
-                                    <input
-                                      type="range"
-                                      min={1}
-                                      max={21}
-                                      value={currentSetup.rearARB}
-                                      onChange={(e) => handleUpdateSetupField('rearARB', Number(e.target.value))}
-                                      className="w-full accent-emerald-500 cursor-pointer h-1.5"
-                                    />
-                                  </div>
-
-                                  {/* Ride Heights */}
-                                  <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 space-y-1">
-                                    <div className="flex justify-between text-[10px] text-slate-400">
-                                      <span>{isTr ? 'Ön Taban:' : 'Front Ride Height:'}</span>
-                                      <span className="font-mono text-emerald-300 font-bold">{currentSetup.frontRideHeight}</span>
-                                    </div>
-                                    <input
-                                      type="range"
-                                      min={10}
-                                      max={45}
-                                      value={currentSetup.frontRideHeight}
-                                      onChange={(e) => handleUpdateSetupField('frontRideHeight', Number(e.target.value))}
-                                      className="w-full accent-emerald-500 cursor-pointer h-1.5"
-                                    />
-                                  </div>
-                                  <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 space-y-1">
-                                    <div className="flex justify-between text-[10px] text-slate-400">
-                                      <span>{isTr ? 'Arka Taban:' : 'Rear Ride Height:'}</span>
-                                      <span className="font-mono text-emerald-300 font-bold">{currentSetup.rearRideHeight}</span>
-                                    </div>
-                                    <input
-                                      type="range"
-                                      min={30}
-                                      max={65}
-                                      value={currentSetup.rearRideHeight}
-                                      onChange={(e) => handleUpdateSetupField('rearRideHeight', Number(e.target.value))}
-                                      className="w-full accent-emerald-500 cursor-pointer h-1.5"
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* 5. BRAKES (PRESSURE & BIAS) */}
-                            {(categoryTab === 'all' || categoryTab === 'brakes') && (
-                              <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800/90 space-y-2">
-                                <div className="flex items-center justify-between text-[11px] font-bold text-red-400">
-                                  <span className="flex items-center gap-1.5">
-                                    <span>🎯</span>
-                                    <span>{isTr ? '5. Frenler (Basınç & Ön Fren Dengesi)' : '5. Brakes (Pressure & Front Bias)'}</span>
-                                  </span>
-                                  <span className="font-mono text-slate-200 text-xs font-bold">
-                                    %{currentSetup.brakePressure} | %{currentSetup.brakeBias}
-                                  </span>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                  <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 space-y-1">
-                                    <div className="flex justify-between text-[10px] text-slate-400">
-                                      <span>{isTr ? 'Fren Basıncı (%):' : 'Brake Pressure (%):'}</span>
-                                      <span className="font-mono text-red-300 font-bold">%{currentSetup.brakePressure}</span>
-                                    </div>
-                                    <input
-                                      type="range"
-                                      min={80}
-                                      max={100}
-                                      value={currentSetup.brakePressure}
-                                      onChange={(e) => handleUpdateSetupField('brakePressure', Number(e.target.value))}
-                                      className="w-full accent-red-500 cursor-pointer h-1.5"
-                                    />
-                                  </div>
-                                  <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 space-y-1">
-                                    <div className="flex justify-between text-[10px] text-slate-400">
-                                      <span>{isTr ? 'Ön Fren Dengesi (%):' : 'Front Brake Bias (%):'}</span>
-                                      <span className="font-mono text-red-300 font-bold">%{currentSetup.brakeBias}</span>
-                                    </div>
-                                    <input
-                                      type="range"
-                                      min={50}
-                                      max={70}
-                                      value={currentSetup.brakeBias}
-                                      onChange={(e) => handleUpdateSetupField('brakeBias', Number(e.target.value))}
-                                      className="w-full accent-red-500 cursor-pointer h-1.5"
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* 6. TYRES (FRONT & REAR PRESSURES) */}
-                            {(categoryTab === 'all' || categoryTab === 'tyres') && (
-                              <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800/90 space-y-2">
-                                <div className="flex items-center justify-between text-[11px] font-bold text-orange-400">
-                                  <span className="flex items-center gap-1.5">
-                                    <span>🏁</span>
-                                    <span>{isTr ? '6. Lastikler (Ön / Arka Basınç PSI)' : '6. Tyres (Front / Rear Pressures PSI)'}</span>
-                                  </span>
-                                  <span className="font-mono text-slate-200 text-xs font-bold">
-                                    {currentSetup.frontTyrePressure} / {currentSetup.rearTyrePressure} PSI
-                                  </span>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                  <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 space-y-1">
-                                    <div className="flex justify-between text-[10px] text-slate-400">
-                                      <span>{isTr ? 'Ön Lastik Basıncı:' : 'Front Tyres Pressure:'}</span>
-                                      <span className="font-mono text-orange-300 font-bold">{currentSetup.frontTyrePressure} PSI</span>
-                                    </div>
-                                    <input
-                                      type="range"
-                                      min={20.0}
-                                      max={29.5}
-                                      step={0.1}
-                                      value={currentSetup.frontTyrePressure}
-                                      onChange={(e) => handleUpdateSetupField('frontTyrePressure', Number(Number(e.target.value).toFixed(1)))}
-                                      className="w-full accent-orange-500 cursor-pointer h-1.5"
-                                    />
-                                  </div>
-                                  <div className="bg-slate-950 p-2 rounded-lg border border-slate-800 space-y-1">
-                                    <div className="flex justify-between text-[10px] text-slate-400">
-                                      <span>{isTr ? 'Arka Lastik Basıncı:' : 'Rear Tyres Pressure:'}</span>
-                                      <span className="font-mono text-orange-300 font-bold">{currentSetup.rearTyrePressure} PSI</span>
-                                    </div>
-                                    <input
-                                      type="range"
-                                      min={19.0}
-                                      max={26.5}
-                                      step={0.1}
-                                      value={currentSetup.rearTyrePressure}
-                                      onChange={(e) => handleUpdateSetupField('rearTyrePressure', Number(Number(e.target.value).toFixed(1)))}
-                                      className="w-full accent-orange-500 cursor-pointer h-1.5"
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Step 1 Confirm Button */}
-                        <button
-                          type="button"
-                          onClick={handleConfirmSetupStep1}
-                          className="w-full py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-extrabold text-xs shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 cursor-pointer transition-all"
-                        >
-                          <span>{isTr ? '✅ Tüm 6 Kategori Setupı Onayla (Adım 2)' : '✅ Confirm 6-Category Setup & Proceed (Step 2)'}</span>
-                          <ArrowRight className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
-
-                    {/* STEP 2: Issue Input Selection Grid */}
-                    {msg.step === 2 && currentStep === 2 && (
-                      <div className="mt-3.5 pt-3 border-t border-slate-800/90 space-y-2">
-                        <div className="text-[11px] font-bold text-slate-300">
-                          {isTr ? 'Yaşadığınız Spesifik Denge Problemini Seçin veya Aşağıya Yazın:' : 'Select Your Specific Handling Problem or Type Below:'}
-                        </div>
-                        <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
-                          {handlingIssues.map((issue) => (
-                            <button
-                              key={issue.id}
-                              type="button"
-                              onClick={() => handleSelectIssue(issue.id, issue.label)}
-                              className="w-full p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-850 border border-slate-800 hover:border-red-500/70 text-left transition-all cursor-pointer flex items-start gap-2.5 group"
-                            >
-                              <span className="text-base shrink-0 mt-0.5">{issue.icon}</span>
-                              <div className="flex-1 min-w-0">
-                                <div className="font-bold text-slate-200 group-hover:text-red-400 text-xs transition-colors truncate">
-                                  {issue.label}
-                                </div>
-                                <div className="text-[10px] text-slate-400 mt-0.5 leading-snug">
-                                  {issue.description}
-                                </div>
-                              </div>
-                              <span className="text-slate-600 group-hover:text-red-400 shrink-0 text-sm">
-                                →
-                              </span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* STEP 3: Detailed Analysis & Numerical Value Changes */}
-                    {msg.step === 3 && msg.diagnosis && (
-                      <div className="mt-3 pt-3 border-t border-slate-800 space-y-3">
-                        {/* Title & Physics Summary */}
-                        <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-700/80 space-y-1.5">
-                          <div className="font-extrabold text-slate-100 text-xs flex items-center gap-1.5 text-red-400">
-                            <Sparkles className="w-3.5 h-3.5" />
-                            <span>{msg.diagnosis.title}</span>
-                          </div>
-                          <p className="text-[11px] text-slate-300 leading-normal">{msg.diagnosis.summary}</p>
-                          <div className="text-[10px] text-slate-400 border-t border-slate-800 pt-1.5 mt-1">
-                            <strong className="text-slate-300">
-                              {isTr ? 'Fiziksel Telemetri Analizi:' : 'Telemetry Diagnosis:'}
-                            </strong>{' '}
-                            {msg.diagnosis.problemAnalysis}
-                          </div>
-                        </div>
-
-                        {/* Exact Numerical Tweaks Table */}
-                        <div className="space-y-2">
-                          <div className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
-                            <span className="flex items-center gap-1">
-                              <Sliders className="w-3 h-3 text-red-400" />
-                              {isTr ? 'Hassas Sayısal Değişim Tablosu (6 Kategori):' : 'Precise Numerical Tweak Table (6 Categories):'}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleCopySetup(msg.id, msg.diagnosis!)}
-                              className="text-[10px] text-slate-400 hover:text-slate-200 flex items-center gap-1 cursor-pointer transition-colors"
-                            >
-                              {copiedId === msg.id ? (
-                                <>
-                                  <Check className="w-3 h-3 text-emerald-400" />
-                                  <span className="text-emerald-400">{isTr ? 'Kopyalandı!' : 'Copied!'}</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Copy className="w-3 h-3" />
-                                  <span>{isTr ? 'Değişimleri Kopyala' : 'Copy Tweaks'}</span>
-                                </>
-                              )}
-                            </button>
-                          </div>
-
-                          <div className="grid grid-cols-1 gap-1.5">
-                            {msg.diagnosis.adjustments.map((adj, i) => (
-                              <div
-                                key={i}
-                                className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-slate-700 flex flex-col gap-1.5 transition-colors"
+                          {/* Category Filter Tabs */}
+                          <div className="flex items-center gap-1 overflow-x-auto pb-0.5 scrollbar-none text-[10px]">
+                            {[
+                              { id: 'all', label: isTr ? 'Tümü (6 Kategori)' : 'All (6 Categories)' },
+                              { id: 'aero', label: isTr ? 'Aero' : 'Aero' },
+                              { id: 'transmission', label: isTr ? 'Şanzıman' : 'Transmission' },
+                              { id: 'geometry', label: isTr ? 'Geometri' : 'Geometry' },
+                              { id: 'suspension', label: isTr ? 'Süspansiyon' : 'Suspension' },
+                              { id: 'brakes', label: isTr ? 'Frenler' : 'Brakes' },
+                              { id: 'tyres', label: isTr ? 'Lastikler' : 'Tyres' },
+                            ].map((t) => (
+                              <button
+                                key={t.id}
+                                type="button"
+                                onClick={() => setCategoryTab(t.id as SetupCategoryTab)}
+                                className={`px-2 py-1 rounded-md font-semibold whitespace-nowrap cursor-pointer transition-colors ${
+                                  categoryTab === t.id
+                                    ? 'bg-red-600 text-white shadow-sm'
+                                    : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                                }`}
                               >
-                                <div className="flex items-center justify-between gap-2">
-                                  <div className="flex items-center gap-1.5">
-                                    <span
-                                      className={`text-[9px] px-1.5 py-0.5 rounded font-extrabold uppercase ${
-                                        adj.category === 'Aero'
-                                          ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
-                                          : adj.category === 'Transmission'
-                                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                                          : adj.category === 'Geometry'
-                                          ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30'
-                                          : adj.category === 'Suspension'
-                                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                                          : adj.category === 'Brakes'
-                                          ? 'bg-red-500/20 text-red-300 border border-red-500/30'
-                                          : adj.category === 'Tyres'
-                                          ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
-                                          : 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
-                                      }`}
-                                    >
-                                      {adj.category}
-                                    </span>
-                                    <span className="font-bold text-slate-200 text-xs">{adj.parameter}</span>
-                                  </div>
-
-                                  {/* Numerical Delta Pill */}
-                                  <div className="flex items-center gap-1 font-mono text-[11px] font-extrabold">
-                                    <span className="text-slate-400">{adj.currentValue}</span>
-                                    <span className="text-slate-500">→</span>
-                                    <span className="text-emerald-400">{adj.recommendedValue}</span>
-                                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                                      {adj.changeDelta}
-                                    </span>
-                                  </div>
-                                </div>
-
-                                <div className="text-xs font-bold text-emerald-300 bg-slate-950/70 px-2.5 py-1.5 rounded-lg border border-slate-800/80 flex items-center gap-1.5">
-                                  <span>🔧</span>
-                                  <span>{adj.adjustment}</span>
-                                </div>
-
-                                <p className="text-[10px] text-slate-400 leading-tight">{adj.impact}</p>
-                              </div>
+                                {t.label}
+                              </button>
                             ))}
                           </div>
-                        </div>
+                        </>
+                      )}
+                    </div>
 
-                        {/* Telemetry Driving Tip */}
-                        <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-300/90 flex items-start gap-2">
-                          <span className="text-base shrink-0">💡</span>
-                          <div>
-                            <strong className="text-amber-200">
-                              {isTr ? 'Telemetri Sürüş Tavsiyesi:' : 'Telemetry Driving Tip:'}
-                            </strong>{' '}
-                            {msg.diagnosis.telemetryTip}
-                          </div>
-                        </div>
-
-                        {/* Quick Action Navigation */}
-                        <div className="pt-2 flex flex-wrap items-center gap-2">
-                          {onFilterMarketplace && (
-                            <button
-                              type="button"
-                              onClick={() => onFilterMarketplace(msg.selectedTrack || selectedTrack, activeGameId)}
-                              className="px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs shadow-md shadow-red-600/20 transition-all flex items-center gap-1.5 cursor-pointer"
-                            >
-                              <Wrench className="w-3.5 h-3.5" />
-                              <span>{currentTrackObj.name} {isTr ? 'Setupları' : 'Setups'}</span>
-                            </button>
-                          )}
+                    {/* Drawer Body: Sliders or Paste Input */}
+                    <div className="flex-1 overflow-y-auto p-3 space-y-3 scrollbar-thin text-xs">
+                      {pasteMode ? (
+                        <div className="space-y-2">
+                          <p className="text-[11px] text-slate-400">
+                            {isTr
+                              ? 'Discord, SimGrid veya oyun içinden kopyaladığınız setup metnini yapıştırın:'
+                              : 'Paste your raw setup text from Discord, SimGrid, or notes:'}
+                          </p>
+                          <textarea
+                            rows={6}
+                            value={pastedSetupText}
+                            onChange={(e) => setPastedSetupText(e.target.value)}
+                            placeholder="Örn: Front Wing 36 Rear Wing 32, Diff on 58% off 52%, Engine Braking 60%, Front Camber -3.00 Rear Camber -1.50, Front Susp 32 Rear Susp 10, Front ARB 8 Rear ARB 5, Ride Height 35/40, Brake Pressure 100%, Bias 55%, PSI 22.5/20.5"
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-red-500 font-mono"
+                          />
                           <button
                             type="button"
-                            onClick={() => {
-                              setCurrentStep(2);
-                              const engMsg: ChatMessage = {
-                                id: `eng-${Date.now()}`,
-                                sender: 'engineer',
-                                text: isTr
-                                  ? 'Aynı setup üzerinde başka hangi virajda veya durumda sorun yaşıyorsun? (Örn: "Düzlük hızım az", "Kerblerde zıplıyor", "Turn-in understeer")'
-                                  : 'On this setup, what other handling issue are you experiencing? (e.g. "Low top speed", "Bouncing on kerbs", "Turn-in understeer")',
-                                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                                step: 2,
-                                selectedTrack: selectedTrack,
-                                setupSnapshot: { ...currentSetup },
-                              };
-                              setMessages((prev) => [...prev, engMsg]);
-                            }}
-                            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 transition-all cursor-pointer"
+                            onClick={handleParsePastedSetup}
+                            className="w-full py-2 rounded-xl text-xs font-bold text-slate-950 bg-amber-400 hover:bg-amber-300 flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
                           >
-                            {isTr ? 'Başka Bir Sorun Analiz Et' : 'Diagnose Another Deficit'}
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span>{isTr ? 'Telemetriyi Ayrıştır ve Yükle' : 'Parse & Load Telemetry'}</span>
                           </button>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                  <span className="text-[10px] text-slate-500 px-1">{msg.timestamp}</span>
-                </div>
-              ))}
+                      ) : (
+                        <>
+                          {/* 1. Aerodynamics */}
+                          {(categoryTab === 'all' || categoryTab === 'aero') && (
+                            <div className="p-2.5 bg-slate-900/90 rounded-xl border border-slate-800 space-y-2">
+                              <div className="text-[11px] font-bold text-sky-400 flex items-center justify-between">
+                                <span>1. {isTr ? 'Aerodinamik' : 'Aerodynamics'}</span>
+                                <span className="font-mono text-white text-[10px]">{currentSetup.frontWing} / {currentSetup.rearWing}</span>
+                              </div>
+                              <div className="space-y-1.5">
+                                <div>
+                                  <div className="flex justify-between text-[10px] text-slate-400">
+                                    <span>{isTr ? 'Ön Kanat (0-50):' : 'Front Wing (0-50):'}</span>
+                                    <span className="font-mono text-white font-bold">{currentSetup.frontWing}</span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min="0"
+                                    max="50"
+                                    value={currentSetup.frontWing}
+                                    onChange={(e) => handleUpdateSetupField('frontWing', Number(e.target.value))}
+                                    className="w-full accent-red-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                                  />
+                                </div>
+                                <div>
+                                  <div className="flex justify-between text-[10px] text-slate-400">
+                                    <span>{isTr ? 'Arka Kanat (0-50):' : 'Rear Wing (0-50):'}</span>
+                                    <span className="font-mono text-white font-bold">{currentSetup.rearWing}</span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min="0"
+                                    max="50"
+                                    value={currentSetup.rearWing}
+                                    onChange={(e) => handleUpdateSetupField('rearWing', Number(e.target.value))}
+                                    className="w-full accent-red-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )}
 
-              {/* Typing indicator */}
-              {isTyping && (
-                <div className="flex items-center gap-2 text-slate-400 text-xs p-2 bg-slate-950/80 rounded-2xl w-fit border border-slate-800">
-                  <div className="w-2 h-2 rounded-full bg-red-500 animate-bounce" />
-                  <div className="w-2 h-2 rounded-full bg-red-500 animate-bounce [animation-delay:0.2s]" />
-                  <div className="w-2 h-2 rounded-full bg-red-500 animate-bounce [animation-delay:0.4s]" />
-                  <span className="text-[11px] text-slate-400 font-medium">
-                    {isTr ? 'Mühendis 6-kategori telemetriyi analiz ediyor...' : 'Engineer analyzing 6-category telemetry...'}
-                  </span>
-                </div>
-              )}
+                          {/* 2. Transmission */}
+                          {(categoryTab === 'all' || categoryTab === 'transmission') && (
+                            <div className="p-2.5 bg-slate-900/90 rounded-xl border border-slate-800 space-y-2">
+                              <div className="text-[11px] font-bold text-sky-400 flex items-center justify-between">
+                                <span>2. {isTr ? 'Şanzıman / Diferansiyel' : 'Transmission / Diff'}</span>
+                                <span className="font-mono text-white text-[10px]">On: %{currentSetup.diffOnThrottle} | Off: %{currentSetup.diffOffThrottle}</span>
+                              </div>
+                              <div className="space-y-1.5">
+                                <div>
+                                  <div className="flex justify-between text-[10px] text-slate-400">
+                                    <span>{isTr ? 'Gaza Basarken Diferansiyel (%):' : 'Diff On-Throttle (%):'}</span>
+                                    <span className="font-mono text-white font-bold">%{currentSetup.diffOnThrottle}</span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min="10"
+                                    max="100"
+                                    value={currentSetup.diffOnThrottle}
+                                    onChange={(e) => handleUpdateSetupField('diffOnThrottle', Number(e.target.value))}
+                                    className="w-full accent-red-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                                  />
+                                </div>
+                                <div>
+                                  <div className="flex justify-between text-[10px] text-slate-400">
+                                    <span>{isTr ? 'Gaz Keserken Diferansiyel (%):' : 'Diff Off-Throttle (%):'}</span>
+                                    <span className="font-mono text-white font-bold">%{currentSetup.diffOffThrottle}</span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min="10"
+                                    max="100"
+                                    value={currentSetup.diffOffThrottle}
+                                    onChange={(e) => handleUpdateSetupField('diffOffThrottle', Number(e.target.value))}
+                                    className="w-full accent-red-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )}
 
-              <div ref={chatEndRef} />
+                          {/* 3. Suspension Geometry */}
+                          {(categoryTab === 'all' || categoryTab === 'geometry') && (
+                            <div className="p-2.5 bg-slate-900/90 rounded-xl border border-slate-800 space-y-2">
+                              <div className="text-[11px] font-bold text-sky-400 flex items-center justify-between">
+                                <span>3. {isTr ? 'Süspansiyon Geometrisi' : 'Suspension Geometry'}</span>
+                                <span className="font-mono text-white text-[10px]">{currentSetup.frontCamber}° / {currentSetup.rearCamber}°</span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <div className="text-[10px] text-slate-400 mb-0.5">{isTr ? 'Ön Kamber:' : 'Front Camber:'} <span className="font-mono text-white font-bold">{currentSetup.frontCamber}°</span></div>
+                                  <input
+                                    type="range"
+                                    min="-3.50"
+                                    max="-2.50"
+                                    step="0.05"
+                                    value={currentSetup.frontCamber}
+                                    onChange={(e) => handleUpdateSetupField('frontCamber', Number(e.target.value))}
+                                    className="w-full accent-red-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                                  />
+                                </div>
+                                <div>
+                                  <div className="text-[10px] text-slate-400 mb-0.5">{isTr ? 'Arka Kamber:' : 'Rear Camber:'} <span className="font-mono text-white font-bold">{currentSetup.rearCamber}°</span></div>
+                                  <input
+                                    type="range"
+                                    min="-2.20"
+                                    max="-0.70"
+                                    step="0.05"
+                                    value={currentSetup.rearCamber}
+                                    onChange={(e) => handleUpdateSetupField('rearCamber', Number(e.target.value))}
+                                    className="w-full accent-red-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                                  />
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <div className="text-[10px] text-slate-400 mb-0.5">{isTr ? 'Ön Toe-Out:' : 'Front Toe-Out:'} <span className="font-mono text-white font-bold">{currentSetup.frontToe}°</span></div>
+                                  <input
+                                    type="range"
+                                    min="0.00"
+                                    max="0.50"
+                                    step="0.01"
+                                    value={currentSetup.frontToe}
+                                    onChange={(e) => handleUpdateSetupField('frontToe', Number(e.target.value))}
+                                    className="w-full accent-red-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                                  />
+                                </div>
+                                <div>
+                                  <div className="text-[10px] text-slate-400 mb-0.5">{isTr ? 'Arka Toe-In:' : 'Rear Toe-In:'} <span className="font-mono text-white font-bold">{currentSetup.rearToe}°</span></div>
+                                  <input
+                                    type="range"
+                                    min="0.00"
+                                    max="0.50"
+                                    step="0.01"
+                                    value={currentSetup.rearToe}
+                                    onChange={(e) => handleUpdateSetupField('rearToe', Number(e.target.value))}
+                                    className="w-full accent-red-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 4. Suspension & ARBs */}
+                          {(categoryTab === 'all' || categoryTab === 'suspension') && (
+                            <div className="p-2.5 bg-slate-900/90 rounded-xl border border-slate-800 space-y-2">
+                              <div className="text-[11px] font-bold text-sky-400 flex items-center justify-between">
+                                <span>4. {isTr ? 'Süspansiyon & Denge Kolları' : 'Suspension & ARBs'}</span>
+                                <span className="font-mono text-white text-[10px]">ARB: {currentSetup.frontARB}/{currentSetup.rearARB}</span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <div className="text-[10px] text-slate-400 mb-0.5">{isTr ? 'Ön Süspansiyon (1-41):' : 'Front Susp (1-41):'} <span className="font-mono text-white font-bold">{currentSetup.frontSuspension}</span></div>
+                                  <input
+                                    type="range"
+                                    min="1"
+                                    max="41"
+                                    value={currentSetup.frontSuspension}
+                                    onChange={(e) => handleUpdateSetupField('frontSuspension', Number(e.target.value))}
+                                    className="w-full accent-red-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                                  />
+                                </div>
+                                <div>
+                                  <div className="text-[10px] text-slate-400 mb-0.5">{isTr ? 'Arka Süspansiyon (1-41):' : 'Rear Susp (1-41):'} <span className="font-mono text-white font-bold">{currentSetup.rearSuspension}</span></div>
+                                  <input
+                                    type="range"
+                                    min="1"
+                                    max="41"
+                                    value={currentSetup.rearSuspension}
+                                    onChange={(e) => handleUpdateSetupField('rearSuspension', Number(e.target.value))}
+                                    className="w-full accent-red-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                                  />
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <div className="text-[10px] text-slate-400 mb-0.5">{isTr ? 'Ön ARB (1-21):' : 'Front ARB (1-21):'} <span className="font-mono text-white font-bold">{currentSetup.frontARB}</span></div>
+                                  <input
+                                    type="range"
+                                    min="1"
+                                    max="21"
+                                    value={currentSetup.frontARB}
+                                    onChange={(e) => handleUpdateSetupField('frontARB', Number(e.target.value))}
+                                    className="w-full accent-red-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                                  />
+                                </div>
+                                <div>
+                                  <div className="text-[10px] text-slate-400 mb-0.5">{isTr ? 'Arka ARB (1-21):' : 'Rear ARB (1-21):'} <span className="font-mono text-white font-bold">{currentSetup.rearARB}</span></div>
+                                  <input
+                                    type="range"
+                                    min="1"
+                                    max="21"
+                                    value={currentSetup.rearARB}
+                                    onChange={(e) => handleUpdateSetupField('rearARB', Number(e.target.value))}
+                                    className="w-full accent-red-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                                  />
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <div className="text-[10px] text-slate-400 mb-0.5">{isTr ? 'Ön Taban (10-45):' : 'Front Ride (10-45):'} <span className="font-mono text-white font-bold">{currentSetup.frontRideHeight}</span></div>
+                                  <input
+                                    type="range"
+                                    min="10"
+                                    max="45"
+                                    value={currentSetup.frontRideHeight}
+                                    onChange={(e) => handleUpdateSetupField('frontRideHeight', Number(e.target.value))}
+                                    className="w-full accent-red-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                                  />
+                                </div>
+                                <div>
+                                  <div className="text-[10px] text-slate-400 mb-0.5">{isTr ? 'Arka Taban (30-65):' : 'Rear Ride (30-65):'} <span className="font-mono text-white font-bold">{currentSetup.rearRideHeight}</span></div>
+                                  <input
+                                    type="range"
+                                    min="30"
+                                    max="65"
+                                    value={currentSetup.rearRideHeight}
+                                    onChange={(e) => handleUpdateSetupField('rearRideHeight', Number(e.target.value))}
+                                    className="w-full accent-red-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 5. Brakes */}
+                          {(categoryTab === 'all' || categoryTab === 'brakes') && (
+                            <div className="p-2.5 bg-slate-900/90 rounded-xl border border-slate-800 space-y-2">
+                              <div className="text-[11px] font-bold text-sky-400 flex items-center justify-between">
+                                <span>5. {isTr ? 'Fren Sistemi' : 'Brakes'}</span>
+                                <span className="font-mono text-white text-[10px]">Bias: %{currentSetup.brakeBias} | Press: %{currentSetup.brakePressure}</span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <div className="text-[10px] text-slate-400 mb-0.5">{isTr ? 'Fren Basıncı (%):' : 'Brake Pressure (%):'} <span className="font-mono text-white font-bold">%{currentSetup.brakePressure}</span></div>
+                                  <input
+                                    type="range"
+                                    min="80"
+                                    max="100"
+                                    value={currentSetup.brakePressure}
+                                    onChange={(e) => handleUpdateSetupField('brakePressure', Number(e.target.value))}
+                                    className="w-full accent-red-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                                  />
+                                </div>
+                                <div>
+                                  <div className="text-[10px] text-slate-400 mb-0.5">{isTr ? 'Ön Fren Dengesi (%):' : 'Front Brake Bias (%):'} <span className="font-mono text-white font-bold">%{currentSetup.brakeBias}</span></div>
+                                  <input
+                                    type="range"
+                                    min="50"
+                                    max="70"
+                                    value={currentSetup.brakeBias}
+                                    onChange={(e) => handleUpdateSetupField('brakeBias', Number(e.target.value))}
+                                    className="w-full accent-red-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 6. Tyres (4 Individual Corners) */}
+                          {(categoryTab === 'all' || categoryTab === 'tyres') && (
+                            <div className="p-2.5 bg-slate-900/90 rounded-xl border border-slate-800 space-y-2">
+                              <div className="text-[11px] font-bold text-sky-400 flex items-center justify-between">
+                                <span>6. {isTr ? 'Lastik Basınçları (4 Tekerlek)' : 'Tyre Pressures (4 Corners)'}</span>
+                                <span className="font-mono text-white text-[10px]">
+                                  {currentSetup.flTyrePressure} / {currentSetup.frTyrePressure} | {currentSetup.rlTyrePressure} / {currentSetup.rrTyrePressure} PSI
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <div className="text-[10px] text-slate-400 mb-0.5">
+                                    {isTr ? 'Ön Sol (FL):' : 'Front Left (FL):'} <span className="font-mono text-white font-bold">{currentSetup.flTyrePressure} PSI</span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min="20.0"
+                                    max="29.5"
+                                    step="0.1"
+                                    value={currentSetup.flTyrePressure}
+                                    onChange={(e) => handleUpdateSetupField('flTyrePressure', Number(e.target.value))}
+                                    className="w-full accent-red-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                                  />
+                                </div>
+                                <div>
+                                  <div className="text-[10px] text-slate-400 mb-0.5">
+                                    {isTr ? 'Ön Sağ (FR):' : 'Front Right (FR):'} <span className="font-mono text-white font-bold">{currentSetup.frTyrePressure} PSI</span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min="20.0"
+                                    max="29.5"
+                                    step="0.1"
+                                    value={currentSetup.frTyrePressure}
+                                    onChange={(e) => handleUpdateSetupField('frTyrePressure', Number(e.target.value))}
+                                    className="w-full accent-red-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                                  />
+                                </div>
+                                <div>
+                                  <div className="text-[10px] text-slate-400 mb-0.5">
+                                    {isTr ? 'Arka Sol (RL):' : 'Rear Left (RL):'} <span className="font-mono text-white font-bold">{currentSetup.rlTyrePressure} PSI</span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min="19.0"
+                                    max="26.5"
+                                    step="0.1"
+                                    value={currentSetup.rlTyrePressure}
+                                    onChange={(e) => handleUpdateSetupField('rlTyrePressure', Number(e.target.value))}
+                                    className="w-full accent-red-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                                  />
+                                </div>
+                                <div>
+                                  <div className="text-[10px] text-slate-400 mb-0.5">
+                                    {isTr ? 'Arka Sağ (RR):' : 'Rear Right (RR):'} <span className="font-mono text-white font-bold">{currentSetup.rrTyrePressure} PSI</span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min="19.0"
+                                    max="26.5"
+                                    step="0.1"
+                                    value={currentSetup.rrTyrePressure}
+                                    onChange={(e) => handleUpdateSetupField('rrTyrePressure', Number(e.target.value))}
+                                    className="w-full accent-red-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
-            {/* Input Bar */}
+            {/* Quick Context Prompt Chips */}
+            <div className="px-3 pt-2 pb-1 bg-slate-900/80 border-t border-slate-800/80 flex items-center gap-1.5 overflow-x-auto scrollbar-thin">
+              <span className="text-[10px] font-bold text-slate-500 uppercase shrink-0">
+                {isTr ? 'Hızlı Telsiz:' : 'Quick Prompt:'}
+              </span>
+              {commonIssues.slice(0, 5).map((iss) => (
+                <button
+                  key={iss.id}
+                  type="button"
+                  onClick={() => handleSendMessage(iss.label)}
+                  className="px-2 py-1 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-[10px] font-medium text-slate-300 hover:text-white whitespace-nowrap flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+                >
+                  <span>{iss.icon}</span>
+                  <span>{iss.label.split('/')[0].trim()}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Natural Chat Input Bar */}
             <form
-              onSubmit={handleSendMessage}
-              className="p-3 bg-slate-950/90 border-t border-slate-800 flex items-center gap-2 shrink-0"
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSendMessage();
+              }}
+              className="p-3 bg-slate-950 border-t border-slate-800/80 flex items-center gap-2"
             >
-              <input
-                ref={inputRef}
-                type="text"
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                placeholder={
-                  currentStep === 1
-                    ? isTr
-                      ? 'Setup değerlerini yazın (Örn: Kanat 36-32, Diff %58, Motor Freni %60)...'
-                      : 'Type setup values (e.g. Wings 36-32, Diff 58%, Engine Braking 60%)...'
-                    : isTr
-                    ? 'Sorununuzu yazın (Örn: Düzlük hızım az, viraj çıkışında arkası kopuyor)...'
-                    : 'Type handling issue (e.g. Low top speed, snap oversteer on exit)...'
-                }
-                className="flex-1 bg-slate-900/90 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-hidden focus:border-red-500/80 focus:ring-1 focus:ring-red-500/50 transition-all"
-              />
+              <div className="flex-1 relative">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  placeholder={
+                    isTr
+                      ? "Yarış mühendisine söyle (örn: 'Pouhon çıkışında arkası kopuyor' veya 'Kanat 36-32')..."
+                      : "Talk to race engineer (e.g., 'Snapping on exit of Turn 4' or 'Running 36-32 wings')..."
+                  }
+                  className="w-full bg-slate-900/90 border border-slate-800 rounded-xl pl-3.5 pr-10 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-red-500 transition-colors"
+                />
+              </div>
+
               <button
                 type="submit"
                 disabled={!inputText.trim() || isTyping}
-                className={`p-2.5 rounded-xl font-bold transition-all cursor-pointer flex items-center justify-center ${
+                className={`p-2.5 rounded-xl transition-all flex items-center justify-center shrink-0 cursor-pointer ${
                   inputText.trim() && !isTyping
-                    ? 'bg-red-600 hover:bg-red-500 text-white shadow-md shadow-red-600/30'
+                    ? 'bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-md shadow-red-600/30'
                     : 'bg-slate-800 text-slate-500 cursor-not-allowed'
                 }`}
+                title={isTr ? 'Telsizden Gönder' : 'Transmit via Radio'}
               >
                 <Send className="w-4 h-4" />
               </button>

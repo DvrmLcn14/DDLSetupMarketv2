@@ -14,6 +14,8 @@ import {
   RotateCcw,
   Upload,
   Image as ImageIcon,
+  Minimize2,
+  Maximize2,
 } from 'lucide-react';
 import { FloatingBannerConfig, FloatingBannerItem } from '../types';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -124,6 +126,26 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
   // Active slide index (0 = Slide 1, 1 = Slide 2, etc.)
   const [currentSlideIndex, setCurrentSlideIndex] = useState<number>(0);
   const [isPaused, setIsPaused] = useState<boolean>(false);
+
+  // User collapsible / shrink toggle state (persisted in localStorage)
+  const [isMinimized, setIsMinimized] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('ddl_banner_minimized') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleMinimized = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsMinimized((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('ddl_banner_minimized', String(next));
+      } catch {}
+      return next;
+    });
+  };
 
   // Admin inline edit mode
   const [isEditingInline, setIsEditingInline] = useState<boolean>(false);
@@ -302,64 +324,103 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
     }
   };
 
+  if (isMinimized && !isEditingInline) {
+    return (
+      <div
+        id="floating-discord-banner-minimized"
+        onClick={handleCardClick}
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+        className={`fixed bottom-3 right-3 z-40 bg-slate-900/95 backdrop-blur-md rounded-full border ${
+          currentTheme.border
+        } ${currentTheme.glow} shadow-xl flex items-center gap-2 p-1.5 pl-2.5 transition-all duration-300 hover:scale-[1.02] cursor-pointer animate-in fade-in select-none max-w-[260px]`}
+        title={`${currentSlide.title} - ${currentSlide.buttonText} (${activeIndex + 1}/${slides.length})`}
+      >
+        <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 shadow-xs ${currentTheme.iconBg}`}>
+          {currentSlide.iconType === 'discord' ? (
+            <DiscordIcon className="w-3 h-3 text-white" />
+          ) : (
+            renderSlideIcon(currentSlide)
+          )}
+        </div>
+        <div className="flex-1 min-w-0 pr-1">
+          <span className="text-[11px] font-black text-white block truncate">
+            {currentSlide.title}
+          </span>
+        </div>
+        <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full border shrink-0 ${currentTheme.badgeBg}`}>
+          {currentSlide.badgeText?.split(' ')[0] || 'AD'}
+        </span>
+        <button
+          type="button"
+          onClick={toggleMinimized}
+          title="Expand Banner"
+          className="p-1 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+        >
+          <Maximize2 className="w-3 h-3" />
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div
       id="floating-discord-banner"
       onClick={handleCardClick}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
-      className={`fixed bottom-4 right-4 z-40 ${
-        isEditingInline ? 'max-w-[420px] sm:max-w-[440px]' : 'max-w-[360px] sm:max-w-[390px]'
-      } w-[calc(100vw-2rem)] bg-slate-900/95 backdrop-blur-md rounded-2xl border ${
+      className={`fixed bottom-3 right-3 z-40 ${
+        isEditingInline ? 'max-w-[380px] sm:max-w-[400px]' : 'max-w-[240px] sm:max-w-[260px]'
+      } w-[calc(100vw-1.5rem)] bg-slate-900/95 backdrop-blur-md rounded-xl border ${
         currentTheme.border
-      } ${currentTheme.glow} shadow-2xl transition-all duration-300 overflow-hidden animate-in fade-in slide-in-from-bottom-5 ${
+      } ${currentTheme.glow} shadow-lg transition-all duration-300 overflow-hidden animate-in fade-in slide-in-from-bottom-5 ${
         !isEditingInline ? 'cursor-pointer hover:border-indigo-500/80 hover:shadow-indigo-500/20' : ''
       }`}
     >
       {/* Top Header Accent Line */}
-      <div className={`h-1.5 w-full bg-gradient-to-r ${currentTheme.gradient}`} />
+      <div className={`h-0.5 w-full bg-gradient-to-r ${currentTheme.gradient}`} />
 
-      <div className="p-4 space-y-3">
-        {/* Top bar: Badge, Online count, Page Indicators (1/2), Prev/Next controls */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 flex-wrap min-w-0">
+      <div className="p-2 sm:p-2.5 space-y-1.5">
+        {/* Top bar: Badge, Online count, Page Indicators (1/5), Prev/Next controls, Minimize */}
+        <div className="flex items-center justify-between gap-1.5">
+          <div className="flex items-center gap-1 flex-wrap min-w-0">
             {isEditingInline ? (
-              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1">
-                <Edit3 className="w-3 h-3 text-amber-400" />
-                <span>Editing Slide {activeIndex + 1}/{slides.length}</span>
+              <span className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1">
+                <Edit3 className="w-2.5 h-2.5 text-amber-400" />
+                <span>Editing {activeIndex + 1}/{slides.length}</span>
               </span>
             ) : (
               <>
                 <span
-                  className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border transition-all duration-300 ${currentTheme.badgeBg}`}
+                  className={`text-[8.5px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded-full border transition-all duration-300 truncate max-w-[110px] ${currentTheme.badgeBg}`}
                 >
-                  {currentSlide.badgeText || (activeIndex === 0 ? 'ADVERTISEMENT' : 'ANNOUNCEMENT')}
+                  {currentSlide.badgeText || (activeIndex === 0 ? 'AD' : 'ANNOUNCEMENT')}
                 </span>
                 {typeof currentSlide.onlineCount === 'number' && (
-                  <span className="flex items-center gap-1.5 text-[11px] font-medium text-slate-400">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                    <span className="text-emerald-400 font-bold">{currentSlide.onlineCount}</span> {t.onlineText}
+                  <span className="flex items-center gap-1 text-[9.5px] font-medium text-slate-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                    <span className="text-emerald-400 font-bold">{currentSlide.onlineCount}</span>
                   </span>
                 )}
               </>
             )}
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-            {/* Slider Controls: Prev (<), Slide Indicator (1/2), Next (>) */}
+          <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+            {/* Slider Controls: Prev (<), Slide Indicator (1/5), Next (>) */}
             {!isEditingInline && (
-              <div className="flex items-center bg-slate-950/80 rounded-lg border border-slate-800 p-0.5 gap-0.5">
+              <div className="flex items-center bg-slate-950/80 rounded border border-slate-800 p-0.5">
                 <button
                   type="button"
                   id="banner-prev-slide-btn"
                   onClick={handlePrevSlide}
                   title="Previous Slide"
-                  className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                  className="p-0.5 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
                 >
-                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <ChevronLeft className="w-2.5 h-2.5" />
                 </button>
 
-                <span className="text-[10px] font-mono font-bold text-slate-300 px-1 select-none">
+                <span className="text-[8.5px] font-mono font-bold text-slate-300 px-1 select-none">
                   {activeIndex + 1}/{slides.length}
                 </span>
 
@@ -368,11 +429,24 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
                   id="banner-next-slide-btn"
                   onClick={handleNextSlide}
                   title="Next Slide"
-                  className="p-1 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                  className="p-0.5 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
                 >
-                  <ChevronRight className="w-3.5 h-3.5" />
+                  <ChevronRight className="w-2.5 h-2.5" />
                 </button>
               </div>
+            )}
+
+            {/* Minimize / Shrink Button */}
+            {!isEditingInline && (
+              <button
+                type="button"
+                id="banner-minimize-btn"
+                onClick={toggleMinimized}
+                title="Minimize banner"
+                className="p-0.5 rounded text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <Minimize2 className="w-2.5 h-2.5" />
+              </button>
             )}
 
             {/* Admin Edit Button */}
@@ -390,16 +464,14 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
                   }
                 }}
                 title={isEditingInline ? 'Cancel Edit' : `Edit Slide ${activeIndex + 1} (Admin)`}
-                className={`flex items-center gap-1 text-[10px] font-extrabold px-2 py-1 rounded-lg border transition-all cursor-pointer ${
+                className={`flex items-center gap-1 text-[9px] font-extrabold px-1.5 py-0.5 rounded-md border transition-all cursor-pointer ${
                   isEditingInline
                     ? 'bg-amber-500 text-slate-950 border-amber-400 font-black shadow-md'
                     : 'bg-slate-800/90 text-amber-300 border-amber-500/30 hover:bg-amber-500 hover:text-slate-950 hover:border-amber-400'
                 }`}
               >
-                <Edit3 className="w-3 h-3" />
-                <span className="hidden xs:inline sm:inline">
-                  {isEditingInline ? 'Exit' : `Edit ${activeIndex + 1}`}
-                </span>
+                <Edit3 className="w-2.5 h-2.5" />
+                <span>{isEditingInline ? 'Exit' : 'Edit'}</span>
               </button>
             )}
           </div>
@@ -637,54 +709,54 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
           /* STANDARD ACTIVE SLIDE DISPLAY                             */
           /* ========================================================= */
           <>
-            {/* Content Section: Icon + Title + Description */}
-            <div className="flex items-start gap-3">
+            {/* Content Section: Compact Icon + Title + Description */}
+            <div className="flex items-center gap-2">
               <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-md ${currentTheme.iconBg}`}
+                className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 shadow-xs ${currentTheme.iconBg}`}
               >
                 {renderSlideIcon(currentSlide)}
               </div>
 
               <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-black text-white tracking-tight flex items-center gap-1.5 truncate group-hover:text-indigo-300 transition-colors">
+                <h4 className="text-[11px] font-bold text-white tracking-tight flex items-center gap-1 truncate group-hover:text-indigo-300 transition-colors">
                   <span>{currentSlide.title}</span>
                 </h4>
-                <p className="text-xs text-slate-300 leading-relaxed mt-0.5 line-clamp-2">
+                <p className="text-[9.5px] text-slate-300 leading-tight truncate">
                   {currentSlide.description}
                 </p>
               </div>
             </div>
 
-            {/* Action Button */}
-            <div className="pt-1">
+            {/* Compact Action Button */}
+            <div>
               <a
                 id="action-floating-banner-btn"
                 href={currentSlide.buttonUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
-                className={`w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black shadow-lg transition-all transform active:scale-95 cursor-pointer ${currentTheme.buttonBg}`}
+                className={`w-full flex items-center justify-center gap-1.5 py-1 px-2.5 rounded-lg text-[10.5px] font-bold shadow transition-all transform active:scale-95 cursor-pointer ${currentTheme.buttonBg}`}
               >
                 {currentSlide.iconType === 'discord' ? (
-                  <DiscordIcon className="w-4 h-4 shrink-0" />
+                  <DiscordIcon className="w-3 h-3 shrink-0" />
                 ) : currentSlide.iconType === 'trophy' ? (
-                  <Trophy className="w-4 h-4 shrink-0" />
+                  <Trophy className="w-3 h-3 shrink-0" />
                 ) : currentSlide.iconType === 'sparkles' ? (
-                  <Sparkles className="w-4 h-4 shrink-0" />
+                  <Sparkles className="w-3 h-3 shrink-0" />
                 ) : currentSlide.iconType === 'zap' ? (
-                  <Zap className="w-4 h-4 shrink-0" />
+                  <Zap className="w-3 h-3 shrink-0" />
                 ) : currentSlide.iconType === 'flag' ? (
-                  <Flag className="w-4 h-4 shrink-0" />
+                  <Flag className="w-3 h-3 shrink-0" />
                 ) : (
-                  <MessageSquare className="w-4 h-4 shrink-0" />
+                  <MessageSquare className="w-3 h-3 shrink-0" />
                 )}
-                <span>{currentSlide.buttonText}</span>
-                <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+                <span className="truncate">{currentSlide.buttonText}</span>
+                <ExternalLink className="w-2.5 h-2.5 opacity-80 shrink-0" />
               </a>
             </div>
 
             {/* Slide Indicator Dots */}
-            <div className="flex items-center justify-center gap-1.5 pt-0.5">
+            <div className="flex items-center justify-center gap-1 pt-0.5">
               {slides.map((_, idx) => (
                 <button
                   key={idx}
@@ -694,10 +766,10 @@ export const FloatingBanner: React.FC<FloatingBannerProps> = ({
                     setCurrentSlideIndex(idx);
                   }}
                   title={`Go to Slide ${idx + 1}`}
-                  className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                  className={`h-0.5 rounded-full transition-all duration-300 cursor-pointer ${
                     idx === activeIndex
-                      ? 'w-6 bg-indigo-400 shadow-sm shadow-indigo-500/50'
-                      : 'w-1.5 bg-slate-700 hover:bg-slate-500'
+                      ? 'w-3.5 bg-indigo-400 shadow-xs shadow-indigo-500/50'
+                      : 'w-1 bg-slate-700 hover:bg-slate-500'
                   }`}
                 />
               ))}

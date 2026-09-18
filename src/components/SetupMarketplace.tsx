@@ -7,6 +7,7 @@ import {
   Download,
   Check,
   ChevronDown,
+  ChevronUp,
   ArrowUpDown,
   Filter,
   Sparkles,
@@ -154,6 +155,47 @@ export const SetupMarketplace: React.FC<SetupMarketplaceProps> = ({
   const [sortBy, setSortBy] = useState<'rating' | 'laptime' | 'newest'>('rating');
   const [viewMode, setViewMode] = useState<'all' | 'favorites' | 'my-setups'>(activeViewMode);
   const [favoritesOnlyFilter, setFavoritesOnlyFilter] = useState<boolean>(false);
+
+  // Collapsible track accordion & secondary filters toggle state
+  const [isTrackAccordionOpen, setIsTrackAccordionOpen] = useState<boolean>(false);
+  const [isSecondaryFiltersOpen, setIsSecondaryFiltersOpen] = useState<boolean>(false);
+
+  // Collapsible tuning categories in inspection modal (default: all open)
+  const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
+
+  const toggleCategory = (catKey: string) => {
+    setCollapsedCategories((prev) => ({
+      ...prev,
+      [catKey]: !prev[catKey],
+    }));
+  };
+
+  const areAllCategoriesCollapsed = ['aero', 'trans', 'geom', 'susp', 'brakes', 'tyres'].every(
+    (key) => collapsedCategories[key]
+  );
+
+  const toggleAllCategories = () => {
+    if (areAllCategoriesCollapsed) {
+      setCollapsedCategories({});
+    } else {
+      setCollapsedCategories({
+        aero: true,
+        trans: true,
+        geom: true,
+        susp: true,
+        brakes: true,
+        tyres: true,
+      });
+    }
+  };
+
+  // Count active secondary filters to display badge on toggle
+  const activeSecondaryFilterCount =
+    (selectedCondition !== 'All' ? 1 : 0) +
+    (selectedType !== 'All' ? 1 : 0) +
+    (selectedDeviceFilter !== 'All' ? 1 : 0) +
+    (selectedVerificationFilter !== 'All' ? 1 : 0) +
+    (sortBy !== 'rating' ? 1 : 0);
 
   // Sync with activeViewMode from header
   React.useEffect(() => {
@@ -737,35 +779,67 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto px-2 sm:px-4 py-4 text-slate-100 font-sans" id="setup-marketplace-root">
-      {/* Top Banner / Marketplace Header */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl relative overflow-hidden backdrop-blur-md">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-red-600/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-10 left-20 w-72 h-72 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1.5 max-w-2xl">
+      {/* Clean Marketplace Header & Game Selector */}
+      <div className="bg-slate-900/95 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-lg relative overflow-hidden backdrop-blur-md">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="space-y-2 max-w-2xl">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full bg-red-500/20 text-red-300 border border-red-500/30 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+              <span className="px-2.5 py-0.5 rounded-full bg-red-600/15 text-red-400 border border-red-500/25 text-xs font-black uppercase tracking-wider flex items-center gap-1.5">
                 <Sparkles className="w-3 h-3 text-red-400" />
-                <span>DDLSetupMarket • {activeGame.name} Setups</span>
+                <span>DDLSetupMarket</span>
               </span>
-              <span className="px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 text-xs font-bold flex items-center gap-1">
-                <span>{activeGame.id === 'f1_24' ? '2024 Ground-Effect Physics' : activeGame.id === 'f1_25' ? '2025 FIA Technical Regulations' : '2026 Active Aerodynamics Physics'}</span>
+              <span className="px-2.5 py-0.5 rounded-full bg-slate-800/80 text-slate-300 border border-slate-700/80 text-xs font-semibold">
+                {activeGame.id === 'f1_24'
+                  ? '2024 Ground-Effect Physics'
+                  : activeGame.id === 'f1_25'
+                  ? '2025 FIA Technical Regulations'
+                  : '2026 Active Aerodynamics Physics'}
               </span>
             </div>
 
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-white tracking-tight">
-              DDLSetupMarket — {activeGame.name} {language === 'tr' ? 'Araç Setupları' : 'Car Setups'}
+            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+              {activeGame.name} {language === 'tr' ? 'Espor Araç Setupları' : 'Esports Car Setups'}
             </h1>
-            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-400 leading-normal">
               {language === 'tr'
-                ? `DDLSetupMarket üzerinde ${activeGame.name} için doğrulanmış espor ve topluluk setuplarını keşfedin, karşılaştırın ve indirin. Telemetri kanıtları ve oyun içi kalibrasyon sayfalarıyla birlikte.`
-                : `Explore, compare, and download verified esports and community setups for ${activeGame.name} on DDLSetupMarket. Complete with telemetry proof and in-game calibration sheets.`}
+                ? `Doğrulanmış espor telemetrileri, topluluk setupları ve oyun içi kalibrasyon sayfaları.`
+                : `Verified esports telemetry, community setups, and in-game calibration sheets.`}
             </p>
+
+            {/* F1 Game Selection Tabs */}
+            <div className="flex items-center gap-2 pt-1 flex-wrap">
+              {SIM_GAMES.map((game) => {
+                const isSelected = selectedGameFilter === game.id;
+                return (
+                  <button
+                    key={game.id}
+                    type="button"
+                    onClick={() => handleSelectGame(game)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all border cursor-pointer ${
+                      isSelected
+                        ? 'bg-red-600 text-white border-red-500 shadow-md shadow-red-600/20'
+                        : 'bg-slate-950/70 text-slate-400 hover:text-slate-200 border-slate-800 hover:border-slate-700'
+                    }`}
+                  >
+                    {game.carImageUrl ? (
+                      <img
+                        src={game.carImageUrl}
+                        alt={game.name}
+                        className="w-6 h-3.5 object-cover rounded shadow-sm shrink-0"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <span>{game.icon}</span>
+                    )}
+                    <span>{game.name}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Action Buttons: Sign In / Profile + Submit Setup */}
+          <div className="flex items-center gap-2.5 flex-wrap self-start lg:self-center">
             {currentUser ? (
               <div className="flex items-center gap-2 bg-slate-950/80 border border-slate-800 p-1.5 pl-3 rounded-xl">
                 <div className="flex items-center gap-2 text-xs">
@@ -773,7 +847,7 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
                     {currentUser.username.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <span className="font-bold text-slate-200 block truncate max-w-[100px]">
+                    <span className="font-bold text-slate-200 block truncate max-w-[110px]">
                       @{currentUser.username}
                     </span>
                   </div>
@@ -791,7 +865,7 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
               <button
                 type="button"
                 onClick={() => onOpenAuth('login')}
-                className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-750 border border-slate-700 flex items-center gap-1.5 transition-colors shadow cursor-pointer"
+                className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-200 hover:text-white bg-slate-800/90 hover:bg-slate-750 border border-slate-700 flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
               >
                 <LogIn className="w-3.5 h-3.5 text-sky-400" />
                 <span>{t.signIn} / {t.register}</span>
@@ -805,7 +879,7 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
                 setEditingSetup(null);
                 setIsSubmitModalOpen(true);
               }}
-              className="px-4 py-2 rounded-xl text-xs font-black text-slate-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 flex items-center gap-1.5 shadow-lg shadow-amber-500/20 transition-all transform hover:scale-[1.02] cursor-pointer"
+              className="px-4 py-2 rounded-xl text-xs font-black text-slate-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all cursor-pointer"
             >
               <PlusCircle className="w-4 h-4" />
               <span>{t.submitSetup}</span>
@@ -813,180 +887,176 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
           </div>
         </div>
 
-        {/* F1 Game Selection Tabs (F1 25 and F1 26) */}
-        <div className="mt-5 pt-4 border-t border-slate-800 flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">
-              {t.activeGameLabel}
-            </span>
-            {SIM_GAMES.map((game) => {
-              const isSelected = selectedGameFilter === game.id;
-              return (
-                <button
-                  key={game.id}
-                  type="button"
-                  onClick={() => handleSelectGame(game)}
-                  className={`px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 whitespace-nowrap transition-all border cursor-pointer ${
-                    isSelected
-                      ? 'bg-gradient-to-r from-red-600 to-rose-700 text-white border-red-500 shadow-md shadow-red-600/30'
-                      : 'bg-slate-950/80 text-slate-400 hover:text-slate-200 border-slate-800 hover:border-slate-700'
-                  }`}
-                >
-                  {game.carImageUrl ? (
-                    <img
-                      src={game.carImageUrl}
-                      alt={game.name}
-                      className="w-7 h-4 object-cover rounded shadow-sm border border-slate-700/60 shrink-0 brightness-105"
-                      referrerPolicy="no-referrer"
-                    />
-                  ) : (
-                    <span className="text-sm">{game.icon}</span>
-                  )}
-                  <span>{game.name}</span>
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded font-normal ${
-                    isSelected ? 'bg-red-800/60 text-white' : 'bg-slate-800 text-slate-400'
-                  }`}>
-                    {game.id === 'f1_24' ? '2024 Regs' : game.id === 'f1_25' ? '2025 Regs' : '2026 Active Aero'}
+        {/* Collapsible Circuit Navigator Accordion */}
+        <div className="mt-4 pt-3.5 border-t border-slate-800/70 space-y-2">
+          {/* Accordion Bar Header */}
+          <div className="flex items-center justify-between gap-3 bg-slate-950/80 border border-slate-800 p-2.5 sm:p-3 rounded-xl">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <Calendar className="w-4 h-4 text-red-500 shrink-0" />
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-xs text-slate-400 font-bold shrink-0 hidden sm:inline">
+                  {language === 'tr' ? 'Pist:' : 'Circuit:'}
+                </span>
+                {selectedTrackFilter === 'all' ? (
+                  <span className="text-xs font-black text-white flex items-center gap-1.5 truncate">
+                    🏁 {t.allTracks} <span className="text-[11px] font-mono text-slate-400 font-normal">({availableTracks.length} {language === 'tr' ? 'Takvim Pisti' : 'Tracks'})</span>
                   </span>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="text-xs text-slate-400 flex items-center gap-1.5">
-            <span>{language === 'tr' ? 'Seçili Pist:' : 'Selected Circuit:'}</span>
-            <strong className="text-white font-bold flex items-center gap-1.5">
-              {selectedTrackFilter !== 'all' && (
-                <TrackFlagIcon
-                  trackId={selectedTrackFilter}
-                  countryOrTrackName={TRACKS[selectedTrackFilter]?.country}
-                  size="sm"
-                />
-              )}
-              <span>{TRACKS[selectedTrackFilter]?.name?.split('(')[0] || (selectedTrackFilter === 'all' ? (language === 'tr' ? 'Tüm F1 Pistleri' : 'All F1 Circuits') : selectedTrackFilter)}</span>
-            </strong>
-          </div>
-        </div>
-
-        {/* Current Track Quick Selector Carousel */}
-        <div className="mt-3 pt-3 border-t border-slate-800/60">
-          <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
-            <span className="font-bold flex items-center gap-1.5 text-slate-300">
-              <Calendar className="w-3.5 h-3.5 text-red-500" />
-              <span>{language === 'tr' ? 'F1 Grand Prix Pistini Seçin' : 'Select F1 Grand Prix Circuit'} ({selectedGameFilter === 'f1_24' ? 'F1® 24' : selectedGameFilter === 'f1_26' ? 'F1® 26' : 'F1® 25'}):</span>
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedTrackFilter('all');
-                onTrackChange('all');
-              }}
-              className={`text-xs font-bold px-2.5 py-0.5 rounded-lg transition-colors cursor-pointer border ${
-                selectedTrackFilter === 'all'
-                  ? 'bg-red-600 text-white border-red-500 shadow-sm'
-                  : 'text-slate-400 hover:text-white border-slate-800 hover:border-slate-700'
-              }`}
-            >
-              {t.allTracks}
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-thin">
-            {availableTracks.map((track) => {
-              const isCurrent = selectedTrackFilter.toLowerCase() === track.id.toLowerCase();
-              const trackSetupsCount = setups.filter(
-                (s) =>
-                  s.trackId.toLowerCase() === track.id.toLowerCase() &&
-                  (selectedGameFilter === 'all' || s.gameId.toLowerCase() === selectedGameFilter.toLowerCase())
-              ).length;
-
-              return (
-                <button
-                  key={track.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedTrackFilter(track.id);
-                    onTrackChange(track.id);
-                  }}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap flex items-center gap-1.5 transition-all border cursor-pointer ${
-                    isCurrent
-                      ? 'bg-gradient-to-r from-red-600 to-rose-700 text-white border-red-400 shadow-md shadow-red-600/30 ring-1 ring-red-400/50'
-                      : 'bg-slate-950/80 text-slate-300 hover:text-white border-slate-800 hover:border-slate-700'
-                  }`}
-                >
-                  <TrackFlagIcon
-                    trackId={track.id}
-                    countryOrTrackName={track.country || TRACKS[track.id]?.country}
-                    size="sm"
-                  />
-                  <span>{track.name.split('(')[0].trim()}</span>
-                  {trackSetupsCount > 0 && (
-                    <span
-                      className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                        isCurrent ? 'bg-red-950/80 text-red-100 border border-red-400/40' : 'bg-slate-800 text-slate-400'
-                      }`}
-                    >
-                      {trackSetupsCount}
+                ) : TRACKS[selectedTrackFilter] ? (
+                  <div className="flex items-center gap-2 truncate">
+                    <TrackFlagIcon
+                      trackId={selectedTrackFilter}
+                      countryOrTrackName={TRACKS[selectedTrackFilter].country}
+                      size="sm"
+                    />
+                    <span className="text-xs font-black text-white truncate">
+                      {TRACKS[selectedTrackFilter].name}
                     </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* F1 BROADCAST CIRCUIT INFO BANNER (When track is selected) */}
-          {selectedTrackFilter !== 'all' && TRACKS[selectedTrackFilter] && (
-            <div className="mt-3 p-3.5 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-l-4 border-l-red-600 border border-slate-800 rounded-xl relative overflow-hidden shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-3 animate-fadeIn">
-              <div className="flex items-center gap-3">
-                <TrackFlagIcon
-                  trackId={selectedTrackFilter}
-                  countryOrTrackName={TRACKS[selectedTrackFilter].country}
-                  size="xl"
-                  className="shadow-md shadow-black/60 border border-slate-600/60"
-                />
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-red-400 bg-red-500/15 px-2 py-0.5 rounded border border-red-500/30">
-                      {language === 'tr' ? 'Resmî Grand Prix Pisti' : 'Official Grand Prix Circuit'}
-                    </span>
-                    <span className="text-xs font-bold text-slate-400">
-                      {translateLocation(TRACKS[selectedTrackFilter].country, language)}
+                    <span className="text-[10px] text-emerald-400 font-mono hidden md:inline">
+                      ({TRACKS[selectedTrackFilter].lapRecord})
                     </span>
                   </div>
-                  <h2 className="text-sm sm:text-base font-black text-white tracking-tight mt-0.5">
-                    {TRACKS[selectedTrackFilter].name}
-                  </h2>
-                </div>
+                ) : (
+                  <span className="text-xs font-bold text-slate-200 truncate">{selectedTrackFilter}</span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {selectedTrackFilter !== 'all' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedTrackFilter('all');
+                    onTrackChange('all');
+                  }}
+                  className="text-[11px] font-bold text-red-400 hover:text-red-300 px-2 py-1 rounded bg-red-950/40 hover:bg-red-900/60 border border-red-800/50 transition-colors cursor-pointer"
+                >
+                  ✕ {language === 'tr' ? 'Sıfırla' : 'Reset'}
+                </button>
+              )}
+
+              <button
+                type="button"
+                id="toggle-track-accordion-btn"
+                onClick={() => setIsTrackAccordionOpen((prev) => !prev)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 border transition-all cursor-pointer ${
+                  isTrackAccordionOpen
+                    ? 'bg-red-600 text-white border-red-500 shadow-sm'
+                    : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border-slate-750'
+                }`}
+              >
+                <span>{language === 'tr' ? 'Pist Değiştir' : 'Change Track'}</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isTrackAccordionOpen ? 'rotate-180' : ''}`} />
+              </button>
+            </div>
+          </div>
+
+          {/* Expanded Track Selection Panel */}
+          {isTrackAccordionOpen && (
+            <div className="p-3 bg-slate-950/90 border border-slate-800 rounded-xl space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
+                <span className="font-bold text-slate-300">
+                  {language === 'tr' ? 'Popüler Grand Prix Pistleri:' : 'Popular Grand Prix Circuits:'}
+                </span>
+
+                <select
+                  value={selectedTrackFilter}
+                  onChange={(e) => {
+                    setSelectedTrackFilter(e.target.value);
+                    onTrackChange(e.target.value);
+                    setIsTrackAccordionOpen(false);
+                  }}
+                  className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-100 font-bold focus:outline-none focus:border-red-500 cursor-pointer"
+                >
+                  <option value="all">🏁 {language === 'tr' ? 'Tüm Pistleri Listele...' : 'All 24 Calendar Tracks...'}</option>
+                  {availableTracks.map((tItem) => (
+                    <option key={tItem.id} value={tItem.id} className="bg-slate-900 text-white">
+                      {getTrackFlagEmoji(tItem.id, tItem.country || TRACKS[tItem.id]?.country)} {tItem.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
-                <div className="bg-slate-900/90 border border-slate-800 p-2 rounded-lg text-center">
-                  <span className="text-[9px] text-slate-400 block font-sans uppercase font-bold">{language === 'tr' ? 'Pist Uzunluğu' : 'Length'}</span>
-                  <span className="text-slate-100 font-bold">{TRACKS[selectedTrackFilter].lengthKm}</span>
-                </div>
-                <div className="bg-slate-900/90 border border-slate-800 p-2 rounded-lg text-center">
-                  <span className="text-[9px] text-slate-400 block font-sans uppercase font-bold">{language === 'tr' ? 'Viraj Sayısı' : 'Turns'}</span>
-                  <span className="text-slate-100 font-bold">{TRACKS[selectedTrackFilter].turnCount} {language === 'tr' ? 'Viraj' : 'Corners'}</span>
-                </div>
-                <div className="bg-slate-900/90 border border-slate-800 p-2 rounded-lg text-center">
-                  <span className="text-[9px] text-slate-400 block font-sans uppercase font-bold">{language === 'tr' ? 'F1 Tur Rekoru' : 'F1 Lap Record'}</span>
-                  <span className="text-emerald-400 font-bold">{TRACKS[selectedTrackFilter].lapRecord}</span>
-                </div>
-                <div className="bg-slate-900/90 border border-slate-800 p-2 rounded-lg text-center">
-                  <span className="text-[9px] text-slate-400 block font-sans uppercase font-bold">{language === 'tr' ? 'Rekor Sahibi' : 'Record Holder'}</span>
-                  <span className="text-sky-300 font-bold truncate block">{TRACKS[selectedTrackFilter].recordHolder}</span>
-                </div>
+              {/* Quick Track Pills */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedTrackFilter('all');
+                    onTrackChange('all');
+                    setIsTrackAccordionOpen(false);
+                  }}
+                  className={`text-xs font-bold px-2.5 py-1 rounded-lg transition-colors cursor-pointer border ${
+                    selectedTrackFilter === 'all'
+                      ? 'bg-red-600 text-white border-red-500 shadow-sm'
+                      : 'bg-slate-900 text-slate-400 hover:text-white border-slate-800'
+                  }`}
+                >
+                  {t.allTracks} ({availableTracks.length})
+                </button>
+
+                {availableTracks
+                  .filter((tr) => ['spa', 'monza', 'silverstone', 'monaco', 'red_bull_ring', 'suzuka', 'interlagos', 'bahrain'].includes(tr.id))
+                  .map((track) => {
+                    const isCurrent = selectedTrackFilter.toLowerCase() === track.id.toLowerCase();
+                    const count = setups.filter(
+                      (s) =>
+                        s.trackId.toLowerCase() === track.id.toLowerCase() &&
+                        (selectedGameFilter === 'all' || s.gameId.toLowerCase() === selectedGameFilter.toLowerCase())
+                    ).length;
+
+                    return (
+                      <button
+                        key={track.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedTrackFilter(track.id);
+                          onTrackChange(track.id);
+                          setIsTrackAccordionOpen(false);
+                        }}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all border cursor-pointer ${
+                          isCurrent
+                            ? 'bg-red-600 text-white border-red-500 shadow-sm'
+                            : 'bg-slate-900 text-slate-300 hover:text-white border-slate-800 hover:border-slate-700'
+                        }`}
+                      >
+                        <TrackFlagIcon trackId={track.id} countryOrTrackName={track.country} size="sm" />
+                        <span>{track.name.split('(')[0].trim()}</span>
+                        {count > 0 && (
+                          <span className={`text-[10px] px-1 py-0.2 rounded font-mono ${isCurrent ? 'bg-red-950 text-white' : 'bg-slate-800 text-slate-400'}`}>
+                            {count}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
               </div>
+
+              {/* Selected Track Detail Banner inside Accordion */}
+              {selectedTrackFilter !== 'all' && TRACKS[selectedTrackFilter] && (
+                <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-3 text-[11px] font-mono text-slate-400">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span>{TRACKS[selectedTrackFilter].lengthKm}</span>
+                    <span>•</span>
+                    <span>{TRACKS[selectedTrackFilter].turnCount} {language === 'tr' ? 'Viraj' : 'Turns'}</span>
+                    <span>•</span>
+                    <span className="text-emerald-400">
+                      {language === 'tr' ? 'Rekor:' : 'Record:'} {TRACKS[selectedTrackFilter].lapRecord} ({TRACKS[selectedTrackFilter].recordHolder})
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
 
-      {/* FILTER & SEARCH BAR */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3.5">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-          {/* Free-typing Search Input */}
-          <div className="md:col-span-5 relative">
+      {/* FILTER & SEARCH BAR (Clean, Grouped Controls) */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 sm:p-4 shadow-md space-y-3">
+        {/* Row 1: Search & View Mode Switcher */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          {/* Search Input */}
+          <div className="flex-1 relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
@@ -994,7 +1064,7 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t.searchPlaceholder}
-              className="w-full bg-slate-950/90 border border-slate-800 rounded-xl pl-9 pr-8 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500 transition-colors"
+              className="w-full bg-slate-950/90 border border-slate-800 rounded-xl pl-9 pr-8 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-red-500 transition-colors"
             />
             {searchQuery && (
               <button
@@ -1007,158 +1077,247 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
             )}
           </div>
 
-          {/* Track Filter */}
-          <div className="md:col-span-3">
-            <select
-              id="marketplace-track-filter"
-              value={selectedTrackFilter}
-              onChange={(e) => setSelectedTrackFilter(e.target.value)}
-              className="w-full bg-slate-950/90 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 font-semibold focus:outline-none focus:border-sky-500"
-            >
-              <option value="all">🏁 {t.allTracks} ({availableTracks.length})</option>
-              {availableTracks.map((tItem) => (
-                <option key={tItem.id} value={tItem.id}>
-                  {getTrackFlagEmoji(tItem.id, tItem.country || TRACKS[tItem.id]?.country)} {tItem.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Clean Input Device Filter: Wheel, Gamepad, Keyboard */}
-          <div className="md:col-span-2">
-            <select
-              id="marketplace-device-filter"
-              value={selectedDeviceFilter}
-              onChange={(e) => setSelectedDeviceFilter(e.target.value as any)}
-              className="w-full bg-slate-950/90 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 font-semibold focus:outline-none focus:border-sky-500"
-            >
-              <option value="All">🎮 {language === 'tr' ? 'Tüm Kontrolcüler' : 'All Controllers'}</option>
-              <option value="Wheel">🏎️ {language === 'tr' ? 'Direksiyon Seti / Direct Drive' : 'Wheel / Direct Drive'}</option>
-              <option value="Gamepad">🎮 {language === 'tr' ? 'Oyun Kolu / Gamepad' : 'Gamepad / Controller'}</option>
-              <option value="Keyboard">⌨️ {language === 'tr' ? 'Klavye' : 'Keyboard'}</option>
-            </select>
-          </div>
-
-          {/* Sort Filter */}
-          <div className="md:col-span-2">
-            <select
-              id="marketplace-sort-select"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="w-full bg-slate-950/90 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 font-semibold focus:outline-none focus:border-sky-500"
-            >
-              <option value="rating">⭐ {t.highestRated}</option>
-              <option value="laptime">⚡ {language === 'tr' ? 'En Hızlı Tur Zamanı' : 'Fastest Lap Time'}</option>
-              <option value="newest">🕒 {t.mostRecent}</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Secondary Quick Filter Pills */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-800/60 text-xs">
-          <div className="flex flex-wrap items-center gap-1.5">
-            {/* Condition Filters */}
-            <span className="text-[11px] text-slate-500 font-bold uppercase mr-1">
-              {language === 'tr' ? 'PİST DURUMU:' : 'TRACK CONDITION:'}
-            </span>
-            {(['All', 'Dry', 'Wet'] as const).map((cond) => (
-              <button
-                key={cond}
-                type="button"
-                onClick={() => setSelectedCondition(cond)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                  selectedCondition === cond
-                    ? cond === 'Dry'
-                      ? 'bg-amber-500 text-slate-950'
-                      : cond === 'Wet'
-                      ? 'bg-sky-500 text-slate-950'
-                      : 'bg-slate-700 text-white'
-                    : 'bg-slate-950/70 text-slate-400 hover:text-slate-200 border border-slate-800'
-                }`}
-              >
-                {cond === 'Dry' ? `☀️ ${t.dryWeather}` : cond === 'Wet' ? `🌧️ ${t.wetWeather}` : t.filterAll}
-              </button>
-            ))}
-
-            {/* Session Type */}
-            <span className="text-[11px] text-slate-500 font-bold uppercase ml-2 mr-1">
-              {language === 'tr' ? 'SETUP TİPİ:' : 'SETUP TYPE:'}
-            </span>
-            {(['All', 'Qualifying', 'Race', 'Time Trial'] as const).map((typ) => (
-              <button
-                key={typ}
-                type="button"
-                onClick={() => setSelectedType(typ)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                  selectedType === typ
-                    ? 'bg-sky-600 text-white font-bold'
-                    : 'bg-slate-950/70 text-slate-400 hover:text-slate-200 border border-slate-800'
-                }`}
-              >
-                {typ === 'Qualifying' ? t.qualifying : typ === 'Race' ? t.racePace : typ === 'Time Trial' ? t.timeTrial : t.filterAll}
-              </button>
-            ))}
-
-            {/* Verification Status */}
-            <span className="text-[11px] text-slate-500 font-bold uppercase ml-2 mr-1">
-              {language === 'tr' ? 'DOĞRULAMA:' : 'VERIFICATION:'}
-            </span>
-            {(['All', 'Verified', 'Pending'] as const).map((ver) => (
-              <button
-                key={ver}
-                type="button"
-                onClick={() => setSelectedVerificationFilter(ver)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 ${
-                  selectedVerificationFilter === ver
-                    ? ver === 'Verified'
-                      ? 'bg-emerald-500 text-slate-950 shadow-sm'
-                      : ver === 'Pending'
-                      ? 'bg-amber-500 text-slate-950 shadow-sm'
-                      : 'bg-slate-700 text-white'
-                    : 'bg-slate-950/70 text-slate-400 hover:text-slate-200 border border-slate-800'
-                }`}
-              >
-                {ver === 'Verified' ? (
-                  <>
-                    <ShieldCheck className="w-3 h-3 text-slate-950" />
-                    <span>{t.adminVerified}</span>
-                  </>
-                ) : ver === 'Pending' ? (
-                  <>
-                    <Clock className="w-3 h-3 text-slate-950" />
-                    <span>{t.pending}</span>
-                  </>
-                ) : (
-                  t.filterAll
-                )}
-              </button>
-            ))}
-          </div>
-
-          {/* Quick Filter Toggles */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Saved Favorites Quick Toggle */}
+          {/* View Mode Segment */}
+          <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-xl border border-slate-800 shrink-0">
             <button
               type="button"
-              id="favorites-quick-filter-btn"
-              onClick={() => {
-                if (viewMode === 'favorites') {
-                  handleSetViewMode('all');
-                } else {
-                  handleSetViewMode('favorites');
-                }
-              }}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors border cursor-pointer ${
-                viewMode === 'favorites'
-                  ? 'bg-amber-500/25 text-amber-300 border-amber-500/60 shadow-sm'
-                  : 'bg-slate-950/70 text-slate-400 hover:text-amber-300 border-slate-800'
+              id="viewmode-all-btn"
+              onClick={() => handleSetViewMode('all')}
+              className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-colors cursor-pointer ${
+                viewMode === 'all'
+                  ? 'bg-red-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <Bookmark className={`w-3.5 h-3.5 ${viewMode === 'favorites' ? 'fill-amber-400 text-amber-400' : 'text-amber-400'}`} />
-              <span>{t.favoritesTab} ({favoritesList.length})</span>
+              {language === 'tr' ? 'Tüm Setuplar' : 'All Setups'} ({setups.length})
             </button>
+            <button
+              type="button"
+              id="viewmode-favorites-btn"
+              onClick={() => handleSetViewMode('favorites')}
+              className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-colors cursor-pointer flex items-center gap-1.5 ${
+                viewMode === 'favorites'
+                  ? 'bg-amber-400 text-slate-950 font-black shadow-sm'
+                  : 'text-slate-400 hover:text-amber-300'
+              }`}
+            >
+              <Bookmark className={`w-3.5 h-3.5 ${viewMode === 'favorites' ? 'fill-slate-950 text-slate-950' : 'text-amber-400'}`} />
+              <span>{language === 'tr' ? 'Favoriler' : 'Favorites'} ({favoritesList.length})</span>
+            </button>
+            {currentUser && (
+              <button
+                type="button"
+                id="viewmode-mysetups-btn"
+                onClick={() => handleSetViewMode('my-setups')}
+                className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-colors cursor-pointer ${
+                  viewMode === 'my-setups'
+                    ? 'bg-red-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {language === 'tr' ? 'Setuplarım' : 'My Setups'} ({setups.filter((s) => s.creatorUsername.toLowerCase() === currentUser.username.toLowerCase()).length})
+              </button>
+            )}
           </div>
+
+          {/* Collapsible Secondary Filters & Options Accordion Toggle Button */}
+          <button
+            type="button"
+            id="marketplace-filters-toggle-btn"
+            onClick={() => setIsSecondaryFiltersOpen((prev) => !prev)}
+            className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0 border ${
+              isSecondaryFiltersOpen || activeSecondaryFilterCount > 0
+                ? 'bg-slate-800 text-slate-100 border-slate-700 shadow-sm'
+                : 'bg-slate-950/80 text-slate-400 hover:text-slate-200 border-slate-800'
+            }`}
+            aria-expanded={isSecondaryFiltersOpen}
+            title={language === 'tr' ? 'İkincil Filtreleri Göster/Gizle' : 'Toggle Secondary Filters'}
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
+            <span>{language === 'tr' ? 'Filtreler' : 'Filters'}</span>
+            {activeSecondaryFilterCount > 0 && (
+              <span className="w-4 h-4 rounded-full bg-red-600 text-white text-[10px] font-black flex items-center justify-center">
+                {activeSecondaryFilterCount}
+              </span>
+            )}
+            <ChevronDown
+              className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+                isSecondaryFiltersOpen ? 'rotate-180 text-red-400' : ''
+              }`}
+            />
+          </button>
         </div>
+
+        {/* Streamlined Quick Filter Tags */}
+        <div className="flex items-center gap-1.5 flex-wrap text-xs pt-1">
+          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mr-1">
+            {language === 'tr' ? 'Hızlı Filtre:' : 'Quick:'}
+          </span>
+          <button
+            type="button"
+            onClick={() => setSelectedCondition(selectedCondition === 'Dry' ? 'All' : 'Dry')}
+            className={`px-2 py-0.5 rounded-lg text-[11px] font-bold transition-all border cursor-pointer ${
+              selectedCondition === 'Dry'
+                ? 'bg-amber-400 text-slate-950 border-amber-300 font-black shadow-sm'
+                : 'bg-slate-950/60 text-slate-400 hover:text-slate-200 border-slate-800/80'
+            }`}
+          >
+            ☀️ {t.dryWeather}
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedCondition(selectedCondition === 'Wet' ? 'All' : 'Wet')}
+            className={`px-2 py-0.5 rounded-lg text-[11px] font-bold transition-all border cursor-pointer ${
+              selectedCondition === 'Wet'
+                ? 'bg-sky-500 text-white border-sky-400 font-black shadow-sm'
+                : 'bg-slate-950/60 text-slate-400 hover:text-slate-200 border-slate-800/80'
+            }`}
+          >
+            🌧️ {t.wetWeather}
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedType(selectedType === 'Qualifying' ? 'All' : 'Qualifying')}
+            className={`px-2 py-0.5 rounded-lg text-[11px] font-bold transition-all border cursor-pointer ${
+              selectedType === 'Qualifying'
+                ? 'bg-purple-600 text-white border-purple-500 font-black shadow-sm'
+                : 'bg-slate-950/60 text-slate-400 hover:text-slate-200 border-slate-800/80'
+            }`}
+          >
+            ⏱️ {t.qualifying}
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedType(selectedType === 'Race' ? 'All' : 'Race')}
+            className={`px-2 py-0.5 rounded-lg text-[11px] font-bold transition-all border cursor-pointer ${
+              selectedType === 'Race'
+                ? 'bg-red-600 text-white border-red-500 font-black shadow-sm'
+                : 'bg-slate-950/60 text-slate-400 hover:text-slate-200 border-slate-800/80'
+            }`}
+          >
+            🏁 {t.racePace}
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedVerificationFilter(selectedVerificationFilter === 'Verified' ? 'All' : 'Verified')}
+            className={`px-2 py-0.5 rounded-lg text-[11px] font-bold transition-all border cursor-pointer flex items-center gap-1 ${
+              selectedVerificationFilter === 'Verified'
+                ? 'bg-emerald-500 text-slate-950 border-emerald-400 font-black shadow-sm'
+                : 'bg-slate-950/60 text-slate-400 hover:text-slate-200 border-slate-800/80'
+            }`}
+          >
+            <ShieldCheck className="w-3 h-3 text-emerald-400" />
+            <span>{t.adminVerified}</span>
+          </button>
+        </div>
+
+        {/* Row 2: Collapsible Secondary Filters & Sort (Hidden by default in clean accordion toggle) */}
+        {isSecondaryFiltersOpen && (
+          <div
+            id="marketplace-secondary-filters-panel"
+            className="flex flex-wrap items-center justify-between gap-2.5 pt-3 border-t border-slate-800/60 text-xs animate-in fade-in slide-in-from-top-2 duration-200"
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Condition Filter */}
+              <div className="flex items-center gap-1 bg-slate-950/70 p-0.5 rounded-lg border border-slate-800">
+                {(['All', 'Dry', 'Wet'] as const).map((cond) => (
+                  <button
+                    key={cond}
+                    type="button"
+                    onClick={() => setSelectedCondition(cond)}
+                    className={`px-2 py-1 rounded text-xs font-bold transition-colors cursor-pointer ${
+                      selectedCondition === cond
+                        ? cond === 'Dry'
+                          ? 'bg-amber-400 text-slate-950'
+                          : cond === 'Wet'
+                          ? 'bg-sky-500 text-white'
+                          : 'bg-slate-700 text-white'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {cond === 'Dry' ? `☀️ ${t.dryWeather}` : cond === 'Wet' ? `🌧️ ${t.wetWeather}` : t.filterAll}
+                  </button>
+                ))}
+              </div>
+
+              {/* Session Type */}
+              <div className="flex items-center gap-1 bg-slate-950/70 p-0.5 rounded-lg border border-slate-800">
+                {(['All', 'Qualifying', 'Race', 'Time Trial'] as const).map((typ) => (
+                  <button
+                    key={typ}
+                    type="button"
+                    onClick={() => setSelectedType(typ)}
+                    className={`px-2 py-1 rounded text-xs font-bold transition-colors cursor-pointer ${
+                      selectedType === typ
+                        ? 'bg-slate-700 text-white'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {typ === 'Qualifying' ? t.qualifying : typ === 'Race' ? t.racePace : typ === 'Time Trial' ? t.timeTrial : t.filterAll}
+                  </button>
+                ))}
+              </div>
+
+              {/* Input Device */}
+              <select
+                id="marketplace-device-filter"
+                value={selectedDeviceFilter}
+                onChange={(e) => setSelectedDeviceFilter(e.target.value as any)}
+                className="bg-slate-950/80 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-200 font-bold focus:outline-none focus:border-red-500 cursor-pointer"
+              >
+                <option value="All">🎮 {language === 'tr' ? 'Tüm Cihazlar' : 'All Devices'}</option>
+                <option value="Wheel">🏎️ {language === 'tr' ? 'Direksiyon Seti' : 'Wheel'}</option>
+                <option value="Gamepad">🎮 {language === 'tr' ? 'Gamepad' : 'Gamepad'}</option>
+              </select>
+
+              {/* Verification Status */}
+              <button
+                type="button"
+                onClick={() => setSelectedVerificationFilter(selectedVerificationFilter === 'Verified' ? 'All' : 'Verified')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors border cursor-pointer flex items-center gap-1 ${
+                  selectedVerificationFilter === 'Verified'
+                    ? 'bg-emerald-500 text-slate-950 border-emerald-400'
+                    : 'bg-slate-950/80 text-slate-400 hover:text-white border-slate-800'
+                }`}
+              >
+                <ShieldCheck className="w-3 h-3" />
+                <span>{t.adminVerified}</span>
+              </button>
+            </div>
+
+            {/* Right: Sort & Reset Filter */}
+            <div className="flex items-center gap-2">
+              <select
+                id="marketplace-sort-select"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="bg-slate-950/80 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-200 font-bold focus:outline-none focus:border-red-500 cursor-pointer"
+              >
+                <option value="rating">⭐ {t.highestRated}</option>
+                <option value="laptime">⚡ {language === 'tr' ? 'Tur Zamanı' : 'Lap Time'}</option>
+                <option value="newest">🕒 {t.mostRecent}</option>
+              </select>
+
+              {(selectedTrackFilter !== 'all' || selectedCondition !== 'All' || selectedType !== 'All' || selectedDeviceFilter !== 'All' || selectedVerificationFilter !== 'All' || searchQuery) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedTrackFilter('all');
+                    setSelectedCondition('All');
+                    setSelectedType('All');
+                    setSelectedDeviceFilter('All');
+                    setSelectedVerificationFilter('All');
+                    setSearchQuery('');
+                    onTrackChange('all');
+                  }}
+                  className="text-xs font-bold text-red-400 hover:text-red-300 px-2 py-1 rounded transition-colors cursor-pointer"
+                >
+                  ✕ {language === 'tr' ? 'Filtreleri Temizle' : 'Reset'}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* SETUP CARDS GRID */}
@@ -1167,49 +1326,14 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
           <span>
             {language === 'tr' ? (
               <>
-                <strong className="text-white">{filteredSetups.length}</strong> {t.setupsCountText} gösteriliyor
+                <strong className="text-white">{filteredSetups.length}</strong> {t.setupsCountText} listeleniyor
               </>
             ) : (
               <>
-                Showing <strong className="text-white">{filteredSetups.length}</strong> {viewMode === 'favorites' ? 'saved favorite' : ''} setups
+                Showing <strong className="text-white">{filteredSetups.length}</strong> setups
               </>
             )}
           </span>
-          <div className="flex items-center gap-1 bg-slate-900/80 p-1 rounded-xl border border-slate-800">
-            <button
-              type="button"
-              id="viewmode-all-btn"
-              onClick={() => handleSetViewMode('all')}
-              className={`px-2.5 py-1 rounded-lg font-bold text-xs transition-colors cursor-pointer ${
-                viewMode === 'all' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              {language === 'tr' ? 'Tüm Setuplar' : 'All Setups'}
-            </button>
-            <button
-              type="button"
-              id="viewmode-favorites-btn"
-              onClick={() => handleSetViewMode('favorites')}
-              className={`px-2.5 py-1 rounded-lg font-bold text-xs transition-colors cursor-pointer flex items-center gap-1.5 ${
-                viewMode === 'favorites' ? 'bg-amber-500 text-slate-950 shadow-sm' : 'text-slate-400 hover:text-amber-300'
-              }`}
-            >
-              <Bookmark className={`w-3.5 h-3.5 ${viewMode === 'favorites' ? 'fill-slate-950' : 'text-amber-400'}`} />
-              <span>{language === 'tr' ? 'Kaydedilen Favoriler' : 'Saved Favorites'} ({favoritesList.length})</span>
-            </button>
-            {currentUser && (
-              <button
-                type="button"
-                id="viewmode-mysetups-btn"
-                onClick={() => handleSetViewMode('my-setups')}
-                className={`px-2.5 py-1 rounded-lg font-bold text-xs transition-colors cursor-pointer ${
-                  viewMode === 'my-setups' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                {language === 'tr' ? 'Setuplarım' : 'My Setups'} ({setups.filter((s) => s.creatorUsername.toLowerCase() === currentUser.username.toLowerCase()).length})
-              </button>
-            )}
-          </div>
         </div>
 
         {filteredSetups.length === 0 ? (
@@ -1848,165 +1972,268 @@ Exported from DDLSetupMarket (ddlsetupmarket.com)`;
                     </div>
                   )}
 
-                  {/* Numerical Setup Sliders Breakdown */}
-                  <div className="space-y-3">
-                    <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                      Car Setup Tuning Parameters
+                  {/* Numerical Setup Sliders Breakdown with Collapsible Category Accordions */}
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                        <SlidersHorizontal className="w-3.5 h-3.5 text-sky-400" />
+                        <span>Car Setup Tuning Parameters</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={toggleAllCategories}
+                        className="text-[10px] font-bold text-sky-400 hover:text-sky-300 px-2 py-0.5 rounded bg-sky-950/60 hover:bg-sky-900/60 border border-sky-800/60 transition-colors cursor-pointer"
+                      >
+                        {areAllCategoriesCollapsed ? 'Expand All' : 'Collapse All'}
+                      </button>
                     </div>
 
                     {/* 1. Aerodynamics */}
-                    <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800">
-                      <div className="text-[11px] font-bold text-sky-400 uppercase tracking-wider mb-2 flex justify-between items-center">
+                    <div className="bg-slate-950/70 rounded-xl border border-slate-800 overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => toggleCategory('aero')}
+                        className="w-full p-3 flex justify-between items-center text-left hover:bg-slate-900/40 transition-colors cursor-pointer"
+                      >
                         <div className="flex items-center gap-2">
-                          <span>1. Aerodynamics</span>
-                          <span className="text-[10px] text-slate-500 font-normal normal-case">(Wings: 0 - 50)</span>
+                          <span className="text-[11px] font-bold text-sky-400 uppercase tracking-wider">1. Aerodynamics</span>
+                          <span className="text-[10px] text-slate-500 font-normal">(Wings: 0 - 50)</span>
                         </div>
-                        <span className="text-slate-400 text-[10px] font-mono">
-                          Wing Balance Ratio: {inspectingSetup.specs.frontWing} / {inspectingSetup.specs.rearWing}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 font-mono">
-                        <div className="bg-slate-900 p-2 rounded-lg flex justify-between">
-                          <span className="text-slate-400">Front Wing Aero:</span>
-                          <span className="text-white font-bold">{inspectingSetup.specs.frontWing}</span>
+                        <div className="flex items-center gap-2 font-mono text-[10px] text-slate-400">
+                          <span>Wings: {inspectingSetup.specs.frontWing} / {inspectingSetup.specs.rearWing}</span>
+                          <ChevronDown
+                            className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+                              !collapsedCategories.aero ? 'rotate-180 text-sky-400' : ''
+                            }`}
+                          />
                         </div>
-                        <div className="bg-slate-900 p-2 rounded-lg flex justify-between">
-                          <span className="text-slate-400">Rear Wing Aero:</span>
-                          <span className="text-white font-bold">{inspectingSetup.specs.rearWing}</span>
+                      </button>
+                      {!collapsedCategories.aero && (
+                        <div className="px-3 pb-3 pt-0 border-t border-slate-800/60 animate-in fade-in duration-150">
+                          <div className="grid grid-cols-2 gap-2 font-mono mt-2.5">
+                            <div className="bg-slate-900 p-2 rounded-lg flex justify-between">
+                              <span className="text-slate-400">Front Wing Aero:</span>
+                              <span className="text-white font-bold">{inspectingSetup.specs.frontWing}</span>
+                            </div>
+                            <div className="bg-slate-900 p-2 rounded-lg flex justify-between">
+                              <span className="text-slate-400">Rear Wing Aero:</span>
+                              <span className="text-white font-bold">{inspectingSetup.specs.rearWing}</span>
+                            </div>
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
 
                     {/* 2. Transmission / Differential */}
-                    <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800">
-                      <div className="text-[11px] font-bold text-sky-400 uppercase tracking-wider mb-2 flex justify-between items-center">
+                    <div className="bg-slate-950/70 rounded-xl border border-slate-800 overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => toggleCategory('trans')}
+                        className="w-full p-3 flex justify-between items-center text-left hover:bg-slate-900/40 transition-colors cursor-pointer"
+                      >
                         <div className="flex items-center gap-2">
-                          <span>2. Transmission</span>
-                          <span className="text-[10px] text-slate-500 font-normal normal-case">(Diff: 10% - 100%)</span>
+                          <span className="text-[11px] font-bold text-sky-400 uppercase tracking-wider">2. Transmission</span>
+                          <span className="text-[10px] text-slate-500 font-normal">(Diff: 10% - 100%)</span>
                         </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 font-mono">
-                        <div className="bg-slate-900 p-2 rounded-lg flex justify-between">
-                          <span className="text-slate-400">Differential On-Throttle:</span>
-                          <span className="text-white font-bold">{inspectingSetup.specs.diffOnThrottle}%</span>
+                        <div className="flex items-center gap-2 font-mono text-[10px] text-slate-400">
+                          <span>Diff: {inspectingSetup.specs.diffOnThrottle}% / {inspectingSetup.specs.diffOffThrottle}%</span>
+                          <ChevronDown
+                            className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+                              !collapsedCategories.trans ? 'rotate-180 text-sky-400' : ''
+                            }`}
+                          />
                         </div>
-                        <div className="bg-slate-900 p-2 rounded-lg flex justify-between">
-                          <span className="text-slate-400">Differential Off-Throttle:</span>
-                          <span className="text-white font-bold">{inspectingSetup.specs.diffOffThrottle}%</span>
+                      </button>
+                      {!collapsedCategories.trans && (
+                        <div className="px-3 pb-3 pt-0 border-t border-slate-800/60 animate-in fade-in duration-150">
+                          <div className="grid grid-cols-2 gap-2 font-mono mt-2.5">
+                            <div className="bg-slate-900 p-2 rounded-lg flex justify-between">
+                              <span className="text-slate-400">Differential On-Throttle:</span>
+                              <span className="text-white font-bold">{inspectingSetup.specs.diffOnThrottle}%</span>
+                            </div>
+                            <div className="bg-slate-900 p-2 rounded-lg flex justify-between">
+                              <span className="text-slate-400">Differential Off-Throttle:</span>
+                              <span className="text-white font-bold">{inspectingSetup.specs.diffOffThrottle}%</span>
+                            </div>
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
 
                     {/* 3. Suspension Geometry */}
-                    <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800">
-                      <div className="text-[11px] font-bold text-sky-400 uppercase tracking-wider mb-2 flex justify-between items-center">
+                    <div className="bg-slate-950/70 rounded-xl border border-slate-800 overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => toggleCategory('geom')}
+                        className="w-full p-3 flex justify-between items-center text-left hover:bg-slate-900/40 transition-colors cursor-pointer"
+                      >
                         <div className="flex items-center gap-2">
-                          <span>3. Suspension Geometry</span>
-                          <span className="text-[10px] text-slate-500 font-normal normal-case">(Camber &amp; Toe Angles)</span>
+                          <span className="text-[11px] font-bold text-sky-400 uppercase tracking-wider">3. Suspension Geometry</span>
+                          <span className="text-[10px] text-slate-500 font-normal">(Camber &amp; Toe)</span>
                         </div>
-                      </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono">
-                        <div className="bg-slate-900 p-2 rounded-lg">
-                          <div className="text-[10px] text-slate-400">Front Camber</div>
-                          <div className="text-white font-bold">{inspectingSetup.specs.frontCamber}°</div>
+                        <div className="flex items-center gap-2 font-mono text-[10px] text-slate-400">
+                          <span>Camber: {inspectingSetup.specs.frontCamber}°</span>
+                          <ChevronDown
+                            className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+                              !collapsedCategories.geom ? 'rotate-180 text-sky-400' : ''
+                            }`}
+                          />
                         </div>
-                        <div className="bg-slate-900 p-2 rounded-lg">
-                          <div className="text-[10px] text-slate-400">Rear Camber</div>
-                          <div className="text-white font-bold">{inspectingSetup.specs.rearCamber}°</div>
+                      </button>
+                      {!collapsedCategories.geom && (
+                        <div className="px-3 pb-3 pt-0 border-t border-slate-800/60 animate-in fade-in duration-150">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono mt-2.5">
+                            <div className="bg-slate-900 p-2 rounded-lg">
+                              <div className="text-[10px] text-slate-400">Front Camber</div>
+                              <div className="text-white font-bold">{inspectingSetup.specs.frontCamber}°</div>
+                            </div>
+                            <div className="bg-slate-900 p-2 rounded-lg">
+                              <div className="text-[10px] text-slate-400">Rear Camber</div>
+                              <div className="text-white font-bold">{inspectingSetup.specs.rearCamber}°</div>
+                            </div>
+                            <div className="bg-slate-900 p-2 rounded-lg">
+                              <div className="text-[10px] text-slate-400">Front Toe-Out</div>
+                              <div className="text-white font-bold">{inspectingSetup.specs.frontToe}°</div>
+                            </div>
+                            <div className="bg-slate-900 p-2 rounded-lg">
+                              <div className="text-[10px] text-slate-400">Rear Toe-In</div>
+                              <div className="text-white font-bold">{inspectingSetup.specs.rearToe}°</div>
+                            </div>
+                          </div>
                         </div>
-                        <div className="bg-slate-900 p-2 rounded-lg">
-                          <div className="text-[10px] text-slate-400">Front Toe-Out</div>
-                          <div className="text-white font-bold">{inspectingSetup.specs.frontToe}°</div>
-                        </div>
-                        <div className="bg-slate-900 p-2 rounded-lg">
-                          <div className="text-[10px] text-slate-400">Rear Toe-In</div>
-                          <div className="text-white font-bold">{inspectingSetup.specs.rearToe}°</div>
-                        </div>
-                      </div>
+                      )}
                     </div>
 
                     {/* 4. Suspension, Anti-Roll Bars & Ride Height */}
-                    <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800">
-                      <div className="text-[11px] font-bold text-sky-400 uppercase tracking-wider mb-2 flex justify-between items-center">
+                    <div className="bg-slate-950/70 rounded-xl border border-slate-800 overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => toggleCategory('susp')}
+                        className="w-full p-3 flex justify-between items-center text-left hover:bg-slate-900/40 transition-colors cursor-pointer"
+                      >
                         <div className="flex items-center gap-2">
-                          <span>4. Suspension &amp; Anti-Roll Bars</span>
-                          <span className="text-[10px] text-slate-500 font-normal normal-case">(Springs 1-41, ARBs 1-21, Ride Height 10-60)</span>
+                          <span className="text-[11px] font-bold text-sky-400 uppercase tracking-wider">4. Suspension &amp; Anti-Roll Bars</span>
+                          <span className="text-[10px] text-slate-500 font-normal">(Springs, ARBs &amp; Height)</span>
                         </div>
-                      </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 font-mono">
-                        <div className="bg-slate-900 p-2 rounded-lg">
-                          <div className="text-[10px] text-slate-400">Front Suspension</div>
-                          <div className="text-white font-bold">{inspectingSetup.specs.frontSuspension}</div>
+                        <div className="flex items-center gap-2 font-mono text-[10px] text-slate-400">
+                          <span>Susp: {inspectingSetup.specs.frontSuspension}/{inspectingSetup.specs.rearSuspension}</span>
+                          <ChevronDown
+                            className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+                              !collapsedCategories.susp ? 'rotate-180 text-sky-400' : ''
+                            }`}
+                          />
                         </div>
-                        <div className="bg-slate-900 p-2 rounded-lg">
-                          <div className="text-[10px] text-slate-400">Rear Suspension</div>
-                          <div className="text-white font-bold">{inspectingSetup.specs.rearSuspension}</div>
+                      </button>
+                      {!collapsedCategories.susp && (
+                        <div className="px-3 pb-3 pt-0 border-t border-slate-800/60 animate-in fade-in duration-150">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 font-mono mt-2.5">
+                            <div className="bg-slate-900 p-2 rounded-lg">
+                              <div className="text-[10px] text-slate-400">Front Suspension</div>
+                              <div className="text-white font-bold">{inspectingSetup.specs.frontSuspension}</div>
+                            </div>
+                            <div className="bg-slate-900 p-2 rounded-lg">
+                              <div className="text-[10px] text-slate-400">Rear Suspension</div>
+                              <div className="text-white font-bold">{inspectingSetup.specs.rearSuspension}</div>
+                            </div>
+                            <div className="bg-slate-900 p-2 rounded-lg">
+                              <div className="text-[10px] text-slate-400">Front Anti-Roll Bar</div>
+                              <div className="text-white font-bold">{inspectingSetup.specs.frontAntiRollBar}</div>
+                            </div>
+                            <div className="bg-slate-900 p-2 rounded-lg">
+                              <div className="text-[10px] text-slate-400">Rear Anti-Roll Bar</div>
+                              <div className="text-white font-bold">{inspectingSetup.specs.rearAntiRollBar}</div>
+                            </div>
+                            <div className="bg-slate-900 p-2 rounded-lg">
+                              <div className="text-[10px] text-slate-400">Front Ride Height</div>
+                              <div className="text-white font-bold">{inspectingSetup.specs.frontRideHeight}</div>
+                            </div>
+                            <div className="bg-slate-900 p-2 rounded-lg">
+                              <div className="text-[10px] text-slate-400">Rear Ride Height</div>
+                              <div className="text-white font-bold">{inspectingSetup.specs.rearRideHeight}</div>
+                            </div>
+                          </div>
                         </div>
-                        <div className="bg-slate-900 p-2 rounded-lg">
-                          <div className="text-[10px] text-slate-400">Front Anti-Roll Bar</div>
-                          <div className="text-white font-bold">{inspectingSetup.specs.frontAntiRollBar}</div>
-                        </div>
-                        <div className="bg-slate-900 p-2 rounded-lg">
-                          <div className="text-[10px] text-slate-400">Rear Anti-Roll Bar</div>
-                          <div className="text-white font-bold">{inspectingSetup.specs.rearAntiRollBar}</div>
-                        </div>
-                        <div className="bg-slate-900 p-2 rounded-lg">
-                          <div className="text-[10px] text-slate-400">Front Ride Height</div>
-                          <div className="text-white font-bold">{inspectingSetup.specs.frontRideHeight}</div>
-                        </div>
-                        <div className="bg-slate-900 p-2 rounded-lg">
-                          <div className="text-[10px] text-slate-400">Rear Ride Height</div>
-                          <div className="text-white font-bold">{inspectingSetup.specs.rearRideHeight}</div>
-                        </div>
-                      </div>
+                      )}
                     </div>
 
                     {/* 5. Brakes */}
-                    <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800">
-                      <div className="text-[11px] font-bold text-sky-400 uppercase tracking-wider mb-2 flex justify-between items-center">
+                    <div className="bg-slate-950/70 rounded-xl border border-slate-800 overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => toggleCategory('brakes')}
+                        className="w-full p-3 flex justify-between items-center text-left hover:bg-slate-900/40 transition-colors cursor-pointer"
+                      >
                         <div className="flex items-center gap-2">
-                          <span>5. Brakes</span>
-                          <span className="text-[10px] text-slate-500 font-normal normal-case">(Pressure 80-100%, Bias 50-70%)</span>
+                          <span className="text-[11px] font-bold text-sky-400 uppercase tracking-wider">5. Brakes</span>
+                          <span className="text-[10px] text-slate-500 font-normal">(Pressure &amp; Bias)</span>
                         </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 font-mono">
-                        <div className="bg-slate-900 p-2 rounded-lg flex justify-between">
-                          <span className="text-slate-400">Brake Pressure:</span>
-                          <span className="text-white font-bold">{inspectingSetup.specs.brakePressure}%</span>
+                        <div className="flex items-center gap-2 font-mono text-[10px] text-slate-400">
+                          <span>{inspectingSetup.specs.brakePressure}% / {inspectingSetup.specs.brakeBias}%</span>
+                          <ChevronDown
+                            className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+                              !collapsedCategories.brakes ? 'rotate-180 text-sky-400' : ''
+                            }`}
+                          />
                         </div>
-                        <div className="bg-slate-900 p-2 rounded-lg flex justify-between">
-                          <span className="text-slate-400">Front Brake Bias:</span>
-                          <span className="text-white font-bold">{inspectingSetup.specs.brakeBias}%</span>
+                      </button>
+                      {!collapsedCategories.brakes && (
+                        <div className="px-3 pb-3 pt-0 border-t border-slate-800/60 animate-in fade-in duration-150">
+                          <div className="grid grid-cols-2 gap-2 font-mono mt-2.5">
+                            <div className="bg-slate-900 p-2 rounded-lg flex justify-between">
+                              <span className="text-slate-400">Brake Pressure:</span>
+                              <span className="text-white font-bold">{inspectingSetup.specs.brakePressure}%</span>
+                            </div>
+                            <div className="bg-slate-900 p-2 rounded-lg flex justify-between">
+                              <span className="text-slate-400">Front Brake Bias:</span>
+                              <span className="text-white font-bold">{inspectingSetup.specs.brakeBias}%</span>
+                            </div>
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
 
                     {/* 6. Tyre Pressures */}
-                    <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800">
-                      <div className="text-[11px] font-bold text-sky-400 uppercase tracking-wider mb-2 flex justify-between items-center">
+                    <div className="bg-slate-950/70 rounded-xl border border-slate-800 overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => toggleCategory('tyres')}
+                        className="w-full p-3 flex justify-between items-center text-left hover:bg-slate-900/40 transition-colors cursor-pointer"
+                      >
                         <div className="flex items-center gap-2">
-                          <span>6. Tyre Pressures</span>
-                          <span className="text-[10px] text-slate-500 font-normal normal-case">(20.0 - 30.0 PSI)</span>
+                          <span className="text-[11px] font-bold text-sky-400 uppercase tracking-wider">6. Tyre Pressures</span>
+                          <span className="text-[10px] text-slate-500 font-normal">(20.0 - 30.0 PSI)</span>
                         </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 font-mono">
-                        <div className="bg-slate-900 p-2 rounded-lg flex justify-between">
-                          <span className="text-slate-400">Front Left Tyre:</span>
-                          <span className="text-white font-bold">{inspectingSetup.specs.flPressure} psi</span>
+                        <div className="flex items-center gap-2 font-mono text-[10px] text-slate-400">
+                          <span>FL {inspectingSetup.specs.flPressure} / FR {inspectingSetup.specs.frPressure} | RL {inspectingSetup.specs.rlPressure} / RR {inspectingSetup.specs.rrPressure} psi</span>
+                          <ChevronDown
+                            className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+                              !collapsedCategories.tyres ? 'rotate-180 text-sky-400' : ''
+                            }`}
+                          />
                         </div>
-                        <div className="bg-slate-900 p-2 rounded-lg flex justify-between">
-                          <span className="text-slate-400">Front Right Tyre:</span>
-                          <span className="text-white font-bold">{inspectingSetup.specs.frPressure} psi</span>
+                      </button>
+                      {!collapsedCategories.tyres && (
+                        <div className="px-3 pb-3 pt-0 border-t border-slate-800/60 animate-in fade-in duration-150">
+                          <div className="grid grid-cols-2 gap-2 font-mono mt-2.5">
+                            <div className="bg-slate-900 p-2 rounded-lg flex justify-between">
+                              <span className="text-slate-400">Front Left Tyre:</span>
+                              <span className="text-white font-bold">{inspectingSetup.specs.flPressure} psi</span>
+                            </div>
+                            <div className="bg-slate-900 p-2 rounded-lg flex justify-between">
+                              <span className="text-slate-400">Front Right Tyre:</span>
+                              <span className="text-white font-bold">{inspectingSetup.specs.frPressure} psi</span>
+                            </div>
+                            <div className="bg-slate-900 p-2 rounded-lg flex justify-between">
+                              <span className="text-slate-400">Rear Left Tyre:</span>
+                              <span className="text-white font-bold">{inspectingSetup.specs.rlPressure} psi</span>
+                            </div>
+                            <div className="bg-slate-900 p-2 rounded-lg flex justify-between">
+                              <span className="text-slate-400">Rear Right Tyre:</span>
+                              <span className="text-white font-bold">{inspectingSetup.specs.rrPressure} psi</span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="bg-slate-900 p-2 rounded-lg flex justify-between">
-                          <span className="text-slate-400">Rear Left Tyre:</span>
-                          <span className="text-white font-bold">{inspectingSetup.specs.rlPressure} psi</span>
-                        </div>
-                        <div className="bg-slate-900 p-2 rounded-lg flex justify-between">
-                          <span className="text-slate-400">Rear Right Tyre:</span>
-                          <span className="text-white font-bold">{inspectingSetup.specs.rrPressure} psi</span>
-                        </div>
-                      </div>
+                      )}
                     </div>
 
                     {/* Creator Notes */}

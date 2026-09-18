@@ -1,5 +1,5 @@
-import React from 'react';
-import { Plus, LogOut, Bookmark, ShieldCheck, Radio } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Plus, LogOut, Bookmark, ShieldCheck, Radio, ChevronDown, Globe } from 'lucide-react';
 import { SupportedF1GameId, SimGame, UserAccount } from '../types';
 import { useLanguage, Language } from '../i18n/LanguageContext';
 
@@ -39,6 +39,25 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
   pendingAdminCount = 0,
 }) => {
   const { language, setLanguage, t } = useLanguage();
+  const [isLangDropdownOpen, setIsLangDropdownOpen] = useState<boolean>(false);
+  const langDropdownRef = useRef<HTMLDivElement>(null);
+
+  const currentLangObj = LANGUAGES.find((l) => l.code === language) || LANGUAGES[0];
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (langDropdownRef.current && !langDropdownRef.current.contains(e.target as Node)) {
+        setIsLangDropdownOpen(false);
+      }
+    };
+    if (isLangDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isLangDropdownOpen]);
 
   return (
     <header className="bg-slate-900 border-b border-slate-800 text-slate-100 sticky top-0 z-30 select-none shadow-md">
@@ -155,33 +174,72 @@ export const DesktopHeader: React.FC<DesktopHeaderProps> = ({
 
         {/* Right Actions: Multi-language Switcher Toggle, Submit F1 Setup, Admin Review & Account */}
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-          {/* Expanded 5-Language Switcher Toggle with Flag PNG Images */}
-          <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 shadow-inner gap-0.5">
-            {LANGUAGES.map((lang) => {
-              const isActive = language === lang.code;
-              return (
-                <button
-                  key={lang.code}
-                  type="button"
-                  id={`lang-toggle-${lang.code}`}
-                  onClick={() => setLanguage(lang.code)}
-                  title={lang.label}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                    isActive
-                      ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-md shadow-red-900/30 border border-red-500/40'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                  }`}
-                >
-                  <img
-                    src={lang.flagImg}
-                    alt={lang.label}
-                    className="w-4 h-2.5 object-cover rounded-xs shadow-xs border border-slate-700/60 flex-shrink-0"
-                    referrerPolicy="no-referrer"
-                  />
-                  <span className="text-[11px] font-bold tracking-tight">{lang.label}</span>
-                </button>
-              );
-            })}
+          {/* Collapsible Language Dropdown Menu */}
+          <div className="relative" ref={langDropdownRef}>
+            <button
+              type="button"
+              id="header-language-dropdown-btn"
+              onClick={() => setIsLangDropdownOpen((prev) => !prev)}
+              className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-800/80 border border-slate-800 text-xs font-bold text-slate-200 transition-all cursor-pointer shadow-xs"
+              title={language === 'tr' ? 'Dili Değiştir' : 'Change Language'}
+              aria-expanded={isLangDropdownOpen}
+            >
+              <img
+                src={currentLangObj.flagImg}
+                alt={currentLangObj.label}
+                className="w-4 h-2.5 object-cover rounded-xs shadow-xs border border-slate-700/60 flex-shrink-0"
+                referrerPolicy="no-referrer"
+              />
+              <span className="text-[11px] font-bold">{currentLangObj.label}</span>
+              <ChevronDown
+                className={`w-3 h-3 text-slate-400 transition-transform duration-200 ${
+                  isLangDropdownOpen ? 'rotate-180 text-red-400' : ''
+                }`}
+              />
+            </button>
+
+            {/* Dropdown Menu Panel */}
+            {isLangDropdownOpen && (
+              <div
+                id="header-language-menu"
+                className="absolute right-0 mt-1.5 w-36 bg-slate-900 border border-slate-800 rounded-xl shadow-xl p-1.5 z-50 space-y-0.5 animate-in fade-in zoom-in-95"
+              >
+                <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2 py-1 flex items-center gap-1.5">
+                  <Globe className="w-3 h-3 text-slate-400" />
+                  <span>{language === 'tr' ? 'Dil Seçimi' : 'Language'}</span>
+                </div>
+                {LANGUAGES.map((lang) => {
+                  const isActive = language === lang.code;
+                  return (
+                    <button
+                      key={lang.code}
+                      type="button"
+                      id={`lang-select-${lang.code}`}
+                      onClick={() => {
+                        setLanguage(lang.code);
+                        setIsLangDropdownOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        isActive
+                          ? 'bg-red-600/20 text-red-300 border border-red-500/30 font-black'
+                          : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <img
+                          src={lang.flagImg}
+                          alt={lang.label}
+                          className="w-4 h-2.5 object-cover rounded-xs shadow-xs border border-slate-700/60 flex-shrink-0"
+                          referrerPolicy="no-referrer"
+                        />
+                        <span>{lang.label}</span>
+                      </div>
+                      {isActive && <span className="w-1.5 h-1.5 rounded-full bg-red-400" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Admin Verification Review Button */}

@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
+import { handleEngineerChat } from './src/server/geminiEngineer';
 
 async function startServer() {
   const app = express();
@@ -187,6 +188,9 @@ async function startServer() {
       res.status(500).json({ success: false, error: err.message });
     }
   });
+
+  // POST /api/engineer/chat - Dynamic conversational AI Race Engineer powered by Gemini & Telemetry Physics
+  app.post('/api/engineer/chat', handleEngineerChat);
 
   // ==========================================
   // VITE MIDDLEWARE / PRODUCTION STATIC FALLBACK
